@@ -35,6 +35,11 @@ jobs:
           python -m pip install -e .
           python -m pip install playwright
           python -m playwright install --with-deps chromium
+      - name: Verify Python syntax and snapshot tests
+        run: |
+          python -m compileall -q tend scripts tests
+          python -m pip install pytest
+          python -m pytest -q tests/test_snapshots.py tests/test_snapshot_intent.py
       - name: Capture representative screens
         run: python scripts/capture_screenshots.py
       - name: Commit screenshots if changed
