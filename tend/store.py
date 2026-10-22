@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS threads(id TEXT PRIMARY KEY,title TEXT NOT NULL,summa
 CREATE TABLE IF NOT EXISTS entries(id TEXT PRIMARY KEY,thread_id TEXT NOT NULL REFERENCES threads(id) ON DELETE CASCADE,kind TEXT NOT NULL,body TEXT NOT NULL,done INTEGER NOT NULL DEFAULT 0,created_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS relations(a TEXT NOT NULL REFERENCES threads(id) ON DELETE CASCADE,b TEXT NOT NULL REFERENCES threads(id) ON DELETE CASCADE,PRIMARY KEY(a,b));
 CREATE TABLE IF NOT EXISTS conversation(id TEXT PRIMARY KEY,role TEXT NOT NULL,body TEXT NOT NULL,created_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS activity(id TEXT PRIMARY KEY,thread_id TEXT NOT NULL REFERENCES threads(id) ON DELETE CASCADE,kind TEXT NOT NULL,body TEXT NOT NULL,occurred_at TEXT NOT NULL,recorded_at TEXT NOT NULL);
 """)
         columns={row[1] for row in c.execute("PRAGMA table_info(threads)")}
         if "category" not in columns:c.execute("ALTER TABLE threads ADD COLUMN category TEXT NOT NULL DEFAULT 'Unsorted'")
@@ -30,6 +31,7 @@ def get(id):
     rows=query("SELECT * FROM threads WHERE id=?",(id,))
     if not rows:return None
     t=rows[0];t["entries"]=query("SELECT * FROM entries WHERE thread_id=? ORDER BY created_at,id",(id,))
+    t["activity"]=query("SELECT * FROM activity WHERE thread_id=? ORDER BY occurred_at DESC,recorded_at DESC",(id,))
     t["related"]=query("SELECT t.id,t.title FROM relations r JOIN threads t ON t.id=CASE WHEN r.a=? THEN r.b ELSE r.a END WHERE r.a=? OR r.b=?",(id,id,id))
     return t
 def list_threads(q=""):
@@ -124,3 +126,34 @@ def daily_brief():
     if not data["waiting"]:lines.append("Nothing waiting.")
     lines+=["",f"Tracking {len(list_threads())} things in total."]
     return "\n".join(lines)
+
+def record_activity(thread_id,body,kind="progress",occurred_at=None):
+    if kind not in {"progress","feedback","decision","blocker","milestone","other"}:raise ValueError("Invalid activity type")
+    if not isinstance(body,str) or not body.strip():raise ValueError("Activity description required")
+    if not get(thread_id):return None
+    when=occurred_at or now()
+    dt=datetime.fromisoformat(when.replace("Z","+00:00"))
+    if dt.tzinfo is None:raise ValueError("Activity time requires timezone")
+    when=dt.astimezone(timezone.utc).isoformat()
+    ident=uuid4().hex
+    with conn() as c:
+        c.execute("INSERT INTO activity(id,thread_id,kind,body,occurred_at,recorded_at) VALUES(?,?,?,?,?,?)",(ident,thread_id,kind,body.strip(),when,now()))
+        c.execute("UPDATE threads SET updated_at=? WHERE id=?",(now(),thread_id))
+    return query("SELECT * FROM activity WHERE id=?",(ident,))[0]
+
+def activity_report(period="week",anchor=None):
+    from datetime import timedelta
+    if period not in ("week","month","quarter","year"):raise ValueError("Invalid reporting period")
+    ref=datetime.fromisoformat(anchor.replace("Z","+00:00")) if anchor else datetime.now(timezone.utc)
+    if ref.tzinfo is None:raise ValueError("Report anchor requires timezone")
+    ref=ref.astimezone(timezone.utc)
+    if period=="week":
+        start=(ref-timedelta(days=ref.weekday())).replace(hour=0,minute=0,second=0,microsecond=0)
+        end=start+timedelta(days=7)
+    else:
+        month=1 if period=="year" else ((ref.month-1)//3)*3+1 if period=="quarter" else ref.month
+        start=ref.replace(month=month,day=1,hour=0,minute=0,second=0,microsecond=0)
+        newmonth=start.month+(12 if period=="year" else 3 if period=="quarter" else 1)
+        end=start.replace(year=start.year+(newmonth-1)//12,month=(newmonth-1)%12+1)
+    rows=query("SELECT a.*,t.title,t.category FROM activity a JOIN threads t ON t.id=a.thread_id WHERE occurred_at>=? AND occurred_at<? ORDER BY occurred_at DESC",(start.isoformat(),end.isoformat()))
+    return {"period":period,"start":start.isoformat(),"end":end.isoformat(),"events":rows,"count":len(rows)}
