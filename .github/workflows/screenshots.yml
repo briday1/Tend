@@ -8,6 +8,12 @@ on:
     branches: [main]
     paths:
       - README.md
+      - tend/index.html
+      - tend/snapshot.html
+      - tend/snapshots.py
+      - tend/snapshot_intent.py
+      - tend/snapshot_export.py
+      - tend/app.py
       - scripts/capture_screenshots.py
       - .github/workflows/screenshots.yml
 
