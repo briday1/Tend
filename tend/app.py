@@ -26,6 +26,7 @@ class Change(BaseModel):
     category:str|None=None
     state:Literal["open","waiting","paused","settled"]|None=None
     revisit_at:datetime|None=None
+    due_at:datetime|None=None
 class Entry(BaseModel):
     kind:Literal["thought","question","action","decision","update"]="thought"
     body:str=Field(min_length=1)
@@ -59,7 +60,8 @@ def get(id:str):return found(db.get(id))
 @app.patch("/api/threads/{id}")
 def change(id:str,data:Change):
     fields=data.model_dump(exclude_unset=True)
-    if fields.get("revisit_at"):fields["revisit_at"]=fields["revisit_at"].isoformat()
+    for field in ("revisit_at","due_at"):
+        if fields.get(field):fields[field]=fields[field].isoformat()
     return found(db.update(id,fields))
 @app.delete("/api/threads/{id}")
 def delete(id:str):return {"deleted":db.delete(id)}
