@@ -33,6 +33,7 @@ class Change(BaseModel):
     due_action:Literal["activity_report"]|None=None
     action_config:dict|None=None
     action_prompt:str|None=None
+    archived_at:str|None=None
 class Entry(BaseModel):
     kind:Literal["thought","question","action","decision","update"]="thought"
     body:str=Field(min_length=1)
@@ -84,6 +85,15 @@ def change(id:str,data:Change):
 def thread_due_action(id:str):
     """Preview the configured task action; never invokes paid AI."""
     return db.report_for_task(id)
+
+@app.get("/api/archived")
+def archived(q:str=""):return db.archived_threads(q)
+
+@app.post("/api/threads/{id}/archive")
+def archive(id:str):return db.archive_thread(id,True)
+
+@app.post("/api/threads/{id}/restore")
+def restore(id:str):return db.archive_thread(id,False)
 
 @app.delete("/api/threads/{id}")
 def delete(id:str):return {"deleted":db.delete(id)}
