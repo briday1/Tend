@@ -115,6 +115,15 @@ def main():
                 assert page.locator("#weekdays span").all_text_contents() == ["Mon", "Tue", "Wed", "Thu", "Fri"], "Empty weekends must be hidden"
                 assert page.locator(".summary, .stat, .eyebrow").count() == 0, "Snapshot must not include summary cards"
                 page.screenshot(path=str(OUT / "snapshot-week.png"), full_page=True)
+                month_start=week_start.replace(day=1)
+                following=(month_start.replace(year=month_start.year+1,month=1)
+                           if month_start.month==12 else month_start.replace(month=month_start.month+1))
+                month_end=following-timedelta(days=1)
+                page.goto(base + "/snapshots?start="+month_start.isoformat()+"&end="+month_end.isoformat(), wait_until="networkidle")
+                page.locator(".day").first.wait_for()
+                assert page.locator("#weekdays span").all_text_contents() == ["Mon", "Tue", "Wed", "Thu", "Fri"]
+                page.screenshot(path=str(OUT / "snapshot-month.png"), full_page=True)
+                page.goto(base + "/snapshots?start="+week_start.isoformat()+"&end="+week_end.isoformat(), wait_until="networkidle")
                 with page.expect_download() as download_info:
                     page.locator("#png").click()
                 assert download_info.value.suggested_filename.endswith(".png")
