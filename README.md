@@ -1,33 +1,35 @@
 # Tend
 
-Tend is a local-first place to capture what's on your mind and return to it naturally. Its browser interface uses chat for capture and exploration, with reminders and threads alongside. No up-front classification is needed.
+A local-first personal assistant for unfinished thoughts. Talk naturally: “Remember that I need to look into this,” “What am I tracking?”, “That thing is blocked,” or “I finished it.” Tend keeps its state in SQLite, **not** browser storage.
 
-## Run locally
+## Install and start
 
-Requires Python 3.11+.
+Python 3.11 or newer.
 
 ```bash
-python -m venv .venv
-# Windows: .venv\Scripts\activate
-# macOS/Linux: source .venv/bin/activate
+git clone https://github.com/briday1/Tend.git
+cd Tend
 python -m pip install -e .
-uvicorn tend.app:app --host 127.0.0.1 --port 8765
+tend
 ```
 
-Open http://127.0.0.1:8765.
+The **single `tend` command** starts the browser web server on http://127.0.0.1:8765 and local MCP streamable-HTTP on http://127.0.0.1:8766/mcp. Press Ctrl+C to stop both. Set `TEND_NO_BROWSER=1` if you don't want your browser to open.
 
-Local data is stored in `~/.tend/tend.sqlite3`, or at `TEND_DB` if set. The web server binds to loopback only when started with the command above. There is no authentication, so do not expose it on a network.
+Open **Settings** in the GUI, enter your HTTPS API base URL, model name and your own API key. The model **must support OpenAI-compatible chat-completions tool calling**. The key is stored in `~/.tend/provider.json` (restricted file permissions on platforms that support them). The GUI never receives the stored key; changing or clearing browser data does not remove it. For hosted AI, note that thread context is sent to the configured provider.
 
-## Optional AI conversation
+## Local storage and MCP
 
-Tend still captures and browses thoughts without an AI key. To enable conversational exploration, set `TEND_AI_API_KEY` **on the local server** before starting Tend. Optionally set `TEND_AI_MODEL` (default `gpt-4.1-mini`) and `TEND_AI_BASE_URL` (default `https://api.openai.com/v1`) for a compatible chat completions endpoint. The browser does not store the key.
+- SQLite: `~/.tend/tend.sqlite3` (override via `TEND_DB`)
+- Browser: http://127.0.0.1:8765
+- MCP HTTP: http://127.0.0.1:8766/mcp
+- MCP stdio alternative: `python -m tend.mcp_server`
+- Local backup: **Settings → Download SQLite backup**
+- Tests: `python -m pip install -e '.[dev]'` then `pytest`
 
-When you ask a question, relevant saved thoughts may be sent to your configured AI provider for reflection. Do not use an untrusted provider with private notes.
+MCP and the browser use **the same database**. MCP tools can read and update stored information. Both servers listen on loopback only; there is no authentication. Do not expose ports to other machines or untrusted clients. Clients must be trusted, and an accessible MCP port is not a protected security boundary.
 
-## MCP
+## What it does
 
-Start with `python -m tend.mcp_server` and point your MCP stdio client to this command in Tend's Python environment. MCP clients can access and modify your local threads; use only trusted clients.
+Conversational capture, question answering from stored threads, completion/waiting status changes, related thoughts, reminders based on explicit revisit dates, searchable history, local SQL storage, BYOK settings, and optional MCP access.
 
-## Scope
-
-Single-user local prototype: capture, search, linked threads, notes, optional AI reflection, chat and a reminders view. No background notifications, automatic semantic grouping, remote synchronization, or hosted account yet. Reminders surface within the browser when it is open.
+Current limits: reminders are surfaced when browsing (no OS push notifications); natural-language dates depend on the model; no scheduled background agent, automatic backup schedule, multi-device sync, or fully semantic long-term retrieval. The assistant uses a bounded tool-calling loop; providers without tool calling won't support the full experience.
