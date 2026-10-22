@@ -78,3 +78,21 @@ In **Settings → Database location**, choose either **Move current database** t
 Open **Settings → Database location → Move current database → Browse…**. Tend opens a native folder picker on the computer running the local server. Choose an existing folder, then click **Move database**. The single `tend` launcher stops the web, MCP, and notification processes, copies and verifies the live SQLite database, switches the active database path, and restarts the services automatically. The original database stays at its previous location as a safety backup. The browser may briefly lose the connection during this operation. Do not terminate Tend during the move.
 
 The other option, **Use an existing Tend database**, accepts an existing full database filename and validates it before switching. Database relocation is available when launched through the `tend` command; starting only `uvicorn` bypasses the supervisor that handles automatic restarts. A desktop folder chooser requires an active GUI session on the local host. Backing up the live database should be done via Tend's SQLite backup feature rather than direct file synchronization.
+
+## Windows desktop app shortcut
+
+Tend can run as a dedicated desktop-style browser window rather than a normal tab. In the cloned repository, first install the editable package into the virtual environment:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -e .
+powershell -ExecutionPolicy Bypass -File .\install-desktop.ps1
+```
+
+This adds a **Tend** shortcut to your Windows Desktop. Double-click it to:
+1. Check `http://127.0.0.1:8765/api/health` for the Tend signature.
+2. Start the local web, MCP, and reminder servers **only if Tend is not already running**.
+3. Wait until the web server responds, then open Tend in an Edge/Chrome `--app` window (without a normal browser tab or toolbar).
+
+You can also use your browser's **Install app** option thanks to `manifest.webmanifest`, but a browser-installed web-app icon **cannot start Python servers on its own**. Use the Windows **Tend** shortcut above as the reliable one-click launcher.
+
+Tend runs locally on loopback only. The new shortcut launches a detached local server that persists after you close the window, so desktop reminders can continue while the process is running. End the Tend processes or restart Windows to stop it; an explicit tray stop control is not implemented yet. Startup issues are logged in `~/.tend/server.log` or `~/.tend/desktop-launch.log`.
