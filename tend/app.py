@@ -8,6 +8,7 @@ from pydantic import BaseModel,Field
 from typing import Literal
 from . import store as db
 from . import ai
+from .rendering import render
 from .ai import reflect
 
 app=FastAPI(title="Tend")
@@ -96,7 +97,7 @@ def chat(data:Message):
     except ValueError as exc:raise HTTPException(502,str(exc)) from exc
     db.remember("user",message)
     db.remember("assistant",result["answer"])
-    return {"answer":result["answer"],"actions":result["actions"],"history":db.conversation()}
+    return {"answer":result["answer"],"answer_html":render(result["answer"]),"actions":result["actions"],"history":db.conversation()}
 
 @app.get("/api/backup")
 def backup():
@@ -114,3 +115,7 @@ def backup():
         raise
     return FileResponse(file.name,filename="tend-backup.sqlite3",media_type="application/octet-stream",
                         background=BackgroundTask(os.unlink,file.name))
+
+@app.get("/api/conversation/rendered")
+def rendered_history():
+    return [{"id":row["id"],"role":row["role"],"body":row["body"],"html":render(row["body"]) if row["role"]=="assistant" else None,"created_at":row["created_at"]} for row in db.conversation()]
