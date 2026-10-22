@@ -46,6 +46,22 @@ def show_error(message):
         pass
 
 def main():
+    import ctypes
+    mutex=ctypes.windll.kernel32.CreateMutexW(None,False,"Local\\TendDesktopTray")
+    if not mutex:raise RuntimeError("Could not initialize desktop launcher")
+    if ctypes.windll.kernel32.GetLastError()==183:
+        # A tray instance already exists; just reopen its application window.
+        open_app()
+        ctypes.windll.kernel32.CloseHandle(mutex)
+        return
+    server=None
+    try:
+        server=start_and_open()
+        run_tray(server)
+    finally:
+        ctypes.windll.kernel32.CloseHandle(mutex)
+
+def start_and_open():
     if sys.platform!="win32":
         raise SystemExit("Desktop launcher currently supports Windows.")
     if not healthy():
@@ -79,6 +95,46 @@ def main():
             log("Tend server failed to become ready; see server.log")
             raise RuntimeError("Tend did not start; see ~/.tend/server.log")
     open_app()
+    return child if 'child' in locals() else None
+
+def run_tray(server):
+    """Remain in the system tray after the app window closes."""
+    import io
+    import pystray
+    from PIL import Image
+    from .windows_icon import raster
+    tray_icon=Image.open(io.BytesIO(raster(64))).convert("RGBA")
+    def reopen(icon,item):
+        if not healthy():
+            show_error("Tend's web server is unavailable. Exit Tend and start it again from the desktop shortcut.")
+        else:
+            open_app()
+    def quit_tend(icon,item):
+        icon.stop()
+        if server is None or server.poll() is not None:
+            return
+        try:
+            import psutil
+            parent=psutil.Process(server.pid)
+            children=parent.children(recursive=True)
+            for proc in children:
+                try:proc.terminate()
+                except psutil.Error:pass
+            psutil.wait_procs(children,timeout=3)
+            for proc in children:
+                try:
+                    if proc.is_running():proc.kill()
+                except psutil.Error:pass
+            try:parent.terminate()
+            except psutil.Error:pass
+        except Exception as exc:
+            log("Unable to stop services cleanly: "+repr(exc))
+    menu=pystray.Menu(
+        pystray.MenuItem("Open Tend",reopen,default=True),
+        pystray.MenuItem("Exit Tend" if server else "Exit Tend tray",quit_tend),
+    )
+    icon=pystray.Icon("tend",tray_icon,"Tend",menu)
+    icon.run()
 
 if __name__=="__main__":
     try:main()
