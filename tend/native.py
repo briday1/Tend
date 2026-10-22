@@ -48,7 +48,7 @@ def main():
         def on_close():
             if not exiting:
                 window.hide()
-                return True
+                return False
         window.events.closing+=on_close
 
         def reopen(icon,item):
