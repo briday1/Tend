@@ -11,7 +11,7 @@ try {
     & $python -m tend.windows_icon $icon
     if ($LASTEXITCODE -ne 0 -or -not (Test-Path $icon)) { throw "Tend icon generation failed." }
 
-    & $python -m PyInstaller --noconfirm --clean --onefile --windowed --name Tend --icon $icon --distpath (Join-Path $repo 'dist') --workpath (Join-Path $repo 'build') --specpath $repo (Join-Path $repo 'tend\native.py')
+    & $python -m PyInstaller --noconfirm --clean --onefile --windowed --collect-all webview --hidden-import pystray._win32 --name Tend --icon $icon --distpath (Join-Path $repo 'dist') --workpath (Join-Path $repo 'build') --specpath $repo (Join-Path $repo 'tend\native.py')
     if ($LASTEXITCODE -ne 0) { throw "Native Tend.exe build failed." }
 
     $exe = Join-Path $repo 'dist\Tend.exe'
