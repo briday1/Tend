@@ -7,11 +7,11 @@ import webbrowser
 from urllib.request import urlopen
 from urllib.error import URLError
 from . import store
+from . import storage
 
 def main():
     store.init()
-    from .storage import activate_pending
-    activate_pending()
+    storage.activate_pending()
     store.init()
     env=os.environ.copy()
     web_host="127.0.0.1"
@@ -47,9 +47,40 @@ def main():
         if not ready:raise RuntimeError("Tend did not become ready on "+url)
         if env.get("TEND_NO_BROWSER")!="1":
             webbrowser.open(url)
-        while all(child.poll() is None for child in children):
+        while True:
+            if any(child.poll() is not None for child in children):
+                raise RuntimeError("A Tend server stopped unexpectedly")
+            if storage.load().get("pending"):
+                print("Switching Tend database; restarting local services...",flush=True)
+                for child in children:
+                    if child.poll() is None:child.terminate()
+                for child in children:
+                    try:child.wait(timeout=10)
+                    except subprocess.TimeoutExpired:
+                        child.kill()
+                        child.wait()
+                children.clear()
+                try:
+                    storage.activate_pending()
+                except Exception as exc:
+                    print("Database switch failed; retaining existing database:",str(exc),flush=True)
+                    # Clear the pending switch to avoid repeatedly interrupting running services.
+                    c=storage.load();c.pop("pending",None);c.pop("pending_mode",None);storage._write(c)
+                store.init()
+                for command in commands:
+                    children.append(subprocess.Popen(command,env=env))
+                deadline=time.monotonic()+20
+                while time.monotonic()<deadline:
+                    if any(child.poll() is not None for child in children):
+                        raise RuntimeError("Tend restart failed")
+                    try:
+                        with urlopen(url,timeout=.8) as response:
+                            if response.status==200:break
+                    except (URLError,OSError,TimeoutError):
+                        time.sleep(.2)
+                else:raise RuntimeError("Tend web server did not restart")
+                print("Tend database active:",store.path(),flush=True)
             time.sleep(.4)
-        raise RuntimeError("A Tend server stopped unexpectedly")
     except KeyboardInterrupt:
         pass
     finally:
