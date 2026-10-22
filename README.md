@@ -10,6 +10,12 @@ The screenshots below use example data, not anyone's personal tasks. They are ge
 
 ![Tend conversation](docs/screenshots/conversation.png)
 
+**Interactive calendar snapshot (synthetic example data)**
+
+![Tend calendar snapshot with color-coded deadlines and insights](docs/screenshots/snapshot-week.png)
+
+The conversation view above also shows a real embedded snapshot generated from local task data—not an AI-created image. You can request it naturally with `give me my next week snapshot` or `/snapshot last month`.
+
 **Tasks**
 
 ![Tend tasks with categories and compact rows](docs/screenshots/tasks.png)
