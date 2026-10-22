@@ -47,11 +47,18 @@ def show_error(message):
 
 def main():
     import ctypes
-    mutex=ctypes.windll.kernel32.CreateMutexW(None,False,"Local\\TendDesktopTray")
+    create_mutex=ctypes.windll.kernel32.CreateMutexW
+    create_mutex.restype=ctypes.c_void_p
+    create_mutex.argtypes=(ctypes.c_void_p,ctypes.c_int,ctypes.c_wchar_p)
+    mutex=create_mutex(None,False,"Local\\TendDesktopTray")
     if not mutex:raise RuntimeError("Could not initialize desktop launcher")
     if ctypes.windll.kernel32.GetLastError()==183:
         # A tray instance already exists; just reopen its application window.
-        open_app()
+        for _ in range(40):
+            if healthy():break
+            time.sleep(.25)
+        if healthy():open_app()
+        else:show_error("Tend is still starting or unavailable. Check the tray and server.log.")
         ctypes.windll.kernel32.CloseHandle(mutex)
         return
     server=None
@@ -117,6 +124,8 @@ def run_tray(server):
             import psutil
             parent=psutil.Process(server.pid)
             children=parent.children(recursive=True)
+            try:parent.terminate()
+            except psutil.Error:pass
             for proc in children:
                 try:proc.terminate()
                 except psutil.Error:pass
@@ -125,8 +134,6 @@ def run_tray(server):
                 try:
                     if proc.is_running():proc.kill()
                 except psutil.Error:pass
-            try:parent.terminate()
-            except psutil.Error:pass
         except Exception as exc:
             log("Unable to stop services cleanly: "+repr(exc))
     menu=pystray.Menu(
