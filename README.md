@@ -12,7 +12,11 @@ The screenshots below use example data, not anyone's personal tasks. They are ge
 
 **Interactive calendar snapshot (synthetic example data)**
 
-![Tend calendar snapshot with color-coded deadlines and insights](docs/screenshots/snapshot-week.png)
+![Tend calendar snapshot in a compact Outlook-style weekday calendar](docs/screenshots/snapshot-week.png)
+
+**Month calendar (weekends appear only when they contain tasks or activity)**
+
+![Tend month snapshot with category-colored task entries](docs/screenshots/snapshot-month.png)
 
 The conversation view above also shows a real embedded snapshot generated from local task data—not an AI-created image. You can request it naturally with `give me my next week snapshot` or `/snapshot last month`.
 
