@@ -137,3 +137,7 @@ The Windows shortcut starts `pythonw.exe -m tend.desktop`; the desktop launcher 
 Conversation displays live, non-sensitive status lines while the assistant contacts its API provider and performs tools (for example, `Connecting to AI provider…` and `Tool: overview — completed`). These are streamed during the response, rather than leaving a static `Thinking…` indicator. Tool arguments, note contents, and API credentials are never included in these status messages. A failed request displays an error with Retry. Each provider request has a 22-second network timeout, and a multi-tool conversation can involve several sequential requests.
 
 To troubleshoot your API key, model name, or custom GenAI.mil endpoint, open **Settings → AI connection → Test connection**. The test sends a small prompt to the configured provider; it uses API tokens, but it does not modify stored thoughts. A successful basic connection test does not guarantee that the model supports tool calling.
+
+### Windows desktop icon
+
+The shortcut installer now generates a multi-resolution `tend.ico` in the repository and assigns it to the Windows `.lnk` file, instead of borrowing the Microsoft Edge icon. Re-run `powershell -ExecutionPolicy Bypass -File .\install-desktop.ps1` to refresh an existing shortcut. Windows may cache old shortcut icons temporarily. The standalone browser window's title-bar/taskbar icon can still depend on Edge/Chrome app-window behavior; the shortcut itself uses Tend's ICO.
