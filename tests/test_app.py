@@ -61,3 +61,27 @@ def test_theme_assets(client):
     assert js.status_code==200 and "data-theme-picker" in js.text
     assert 'href="/theme.css"' in client.get("/").text
     assert 'href="/theme.css"' in client.get("/board").text
+
+def test_local_brief_and_command_reference(client):
+    from tend import commands,store
+    store.create("Important ongoing decision")
+    assert "Important ongoing decision" in store.daily_brief()
+    assert "**/brief**" in commands.execute("/help")["answer"]
+    assert client.post("/api/chat",json={"text":"/brief"}).status_code==200
+    assert any(c["name"]=="/brief" for c in client.get("/api/commands").json())
+
+def test_claim_reminder_once(client):
+    from tend import store
+    t=store.create("Check local reminder")
+    store.update(t["id"],{"revisit_at":"2020-01-01T00:00:00+00:00"})
+    found=store.claim_notifications()
+    assert any(row["id"]==t["id"] for row in found)
+    assert all(row["id"]!=t["id"] for row in store.claim_notifications())
+    store.update(t["id"],{"revisit_at":"2020-01-02T00:00:00+00:00"})
+    assert any(row["id"]==t["id"] for row in store.claim_notifications())
+
+def test_attention_empty_and_commands_without_api_key(client,monkeypatch):
+    from tend import ai
+    monkeypatch.setattr(ai,"public_config",lambda:{"has_key":False})
+    assert client.get("/api/attention?force=true").json()["items"]==[]
+    assert client.get("/api/brief").status_code==200
