@@ -32,6 +32,7 @@ class Change(BaseModel):
     next_occurrence:datetime|None=None
     due_action:Literal["activity_report"]|None=None
     action_config:dict|None=None
+    action_prompt:str|None=None
 class Entry(BaseModel):
     kind:Literal["thought","question","action","decision","update"]="thought"
     body:str=Field(min_length=1)
