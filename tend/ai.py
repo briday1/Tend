@@ -133,3 +133,49 @@ def chat(message):
 
 def reflect(question):
     return {"configured":public_config()["has_key"],"answer":chat(question)["answer"]}
+
+# A small in-process cache avoids paying for an AI decision on every page load.
+_attention_cache={"signature":None,"expires":0.0,"items":[]}
+def attention(force=False):
+    import time
+    threads=[t for t in store.list_threads() if t["state"]!="settled"]
+    signature=tuple((t["id"],t["updated_at"],t["revisit_at"],t["state"]) for t in threads)
+    current=time.monotonic()
+    if not force and _attention_cache["signature"]==signature and current<_attention_cache["expires"]:
+        return {"items":_attention_cache["items"],"source":"cached"}
+    candidates=threads[:80]
+    due=[t for t in candidates if t["due"]]
+    fallback=[{"id":t["id"],"title":t["title"],"reason":"Scheduled to revisit","state":t["state"]} for t in due[:4]]
+    if not candidates:
+        selected=[]
+    elif not public_config()["has_key"]:
+        selected=fallback
+    else:
+        try:
+            context=[{"id":t["id"],"title":t["title"],"summary":t["summary"][:500],
+                      "state":t["state"],"revisit_at":t["revisit_at"],"due":t["due"],
+                      "updated_at":t["updated_at"]} for t in candidates]
+            prompt=[{"role":"system","content":
+                "Curate the attention sidebar of a personal assistant. Select 0 to 5 items only if "
+                "they merit attention now: due reminders, near-term commitments, unresolved blockers, "
+                "or a meaningful decision. Do NOT show every active item. If nothing merits attention, "
+                "return an empty list. Only use supplied IDs, and do not invent facts. Return JSON "
+                "object with one key 'items', an array of objects with 'id' and brief 'reason'."},
+                    {"role":"user","content":json.dumps(context,ensure_ascii=False)}]
+            reply=request(prompt,tools=False)
+            raw=reply["choices"][0]["message"].get("content") or "{}"
+            if raw.strip().startswith("```"):
+                raw=raw.strip().split("\n",1)[-1].rsplit("```",1)[0]
+            payload=json.loads(raw)
+            valid={t["id"]:t for t in candidates}
+            selected=[]
+            for item in payload.get("items",[])[:5]:
+                t=valid.get(item.get("id"))
+                if t and t["id"] not in {x["id"] for x in selected}:
+                    selected.append({"id":t["id"],"title":t["title"],
+                                     "reason":str(item.get("reason","Worth revisiting"))[:180],
+                                     "state":t["state"]})
+        except (KeyError,ValueError,TypeError,IndexError):
+            selected=fallback
+    _attention_cache.update(signature=signature,expires=current+600,items=selected)
+    return {"items":selected,"source":"curated" if public_config()["has_key"] else "scheduled"}
