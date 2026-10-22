@@ -21,7 +21,7 @@ def healthy():
     try:
         with urlopen(f"http://127.0.0.1:{port()}/api/health",timeout=0.75) as response:
             data=json.load(response)
-            return response.status==200 and data.get("app")=="tend"
+            return response.status==200 and data.get("app")=="tend" and data.get("streaming_chat") is True
     except (OSError,ValueError,URLError):
         return False
 
@@ -42,6 +42,15 @@ def main():
     if sys.platform!="win32":
         raise SystemExit("Desktop launcher currently supports Windows.")
     if not healthy():
+        # Never start a second server over an old installation on the same port.
+        try:
+            with urlopen(f"http://127.0.0.1:{port()}/api/health",timeout=.8) as existing:
+                if existing.status==200:
+                    raise RuntimeError("An older Tend server is running on this port. Stop the old Tend Python processes and reopen the desktop shortcut.")
+        except URLError as e:
+            if hasattr(e,"code") and e.code != 404:raise RuntimeError("Port is occupied by another service") from None
+        except RuntimeError:
+            raise
         # Launch the service supervisor with pythonw.exe, not console python.exe.
         # With stdout/stderr redirected it has no reason to create a console.
         py=sys.executable
