@@ -116,7 +116,7 @@ def request(messages,tools=True,max_tokens=None):
     req=Request(base+"/chat/completions",data=json.dumps(payload).encode(),method="POST",
        headers={"Authorization":"Bearer "+key,"Content-Type":"application/json"})
     try:
-        with urlopen(req,timeout=35) as response:return json.load(response)
+        with urlopen(req,timeout=22) as response:return json.load(response)
     except HTTPError as e:raise ValueError("Provider returned HTTP "+str(e.code)) from e
     except (URLError,TimeoutError) as e:raise ValueError("Could not reach AI provider") from e
 
