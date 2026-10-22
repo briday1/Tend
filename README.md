@@ -131,3 +131,9 @@ Update the repository and reinstall the editable package, then **stop any Tend s
 ### Fully windowless startup
 
 The Windows shortcut starts `pythonw.exe -m tend.desktop`; the desktop launcher now uses `pythonw.exe` for its detached service supervisor as well. All service output is redirected to `%USERPROFILE%\.tend\server.log` and `services.log`. The Tend app window is the only window that should appear. If you still see a command window, close any Tend process started earlier from PowerShell and recreate the shortcut with `install-desktop.ps1`. Do not launch `.venv\Scripts\tend.exe` to get background operation, because that is the terminal-oriented command.
+
+## AI connection diagnostics
+
+Conversation displays live, non-sensitive status lines while the assistant contacts its API provider and performs tools (for example, `Connecting to AI provider…` and `Tool: overview — completed`). These are streamed during the response, rather than leaving a static `Thinking…` indicator. Tool arguments, note contents, and API credentials are never included in these status messages. A failed request displays an error with Retry. Each provider request has a 22-second network timeout, and a multi-tool conversation can involve several sequential requests.
+
+To troubleshoot your API key, model name, or custom GenAI.mil endpoint, open **Settings → AI connection → Test connection**. The test sends a small prompt to the configured provider; it uses API tokens, but it does not modify stored thoughts. A successful basic connection test does not guarantee that the model supports tool calling.
