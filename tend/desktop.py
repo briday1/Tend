@@ -42,15 +42,13 @@ def main():
     if sys.platform!="win32":
         raise SystemExit("Desktop launcher currently supports Windows.")
     if not healthy():
-        # Never start a second server over an old installation on the same port.
-        try:
-            with urlopen(f"http://127.0.0.1:{port()}/api/health",timeout=.8) as existing:
-                if existing.status==200:
-                    raise RuntimeError("An older Tend server is running on this port. Stop the old Tend Python processes and reopen the desktop shortcut.")
-        except URLError as e:
-            if hasattr(e,"code") and e.code != 404:raise RuntimeError("Port is occupied by another service") from None
-        except RuntimeError:
-            raise
+        # Do not silently reuse a server with an incompatible API.
+        import socket
+        with socket.socket() as probe:
+            probe.settimeout(.5)
+            occupied=probe.connect_ex(("127.0.0.1",port()))==0
+        if occupied:
+            raise RuntimeError("An outdated or different server is using Tend's port. Stop that process before launching the new Tend shortcut.")
         # Launch the service supervisor with pythonw.exe, not console python.exe.
         # With stdout/stderr redirected it has no reason to create a console.
         py=sys.executable
