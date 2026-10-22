@@ -52,7 +52,7 @@ Open **Settings → AI connection**. Enter your provider's HTTPS API base URL, m
 - **Archive:** Put finished or inactive tasks away without deleting them; restore them later.
 - **MCP:** Other trusted local tools can access the same Tend data through `http://127.0.0.1:8766/mcp`.
 
-Example things to say: “Remind me to follow up next Thursday,” “What am I waiting on?”, “Summarize the week's Branch Activity,” or “Archive that task.”
+Example things to say: “Remind me to follow up next Thursday,” “What am I waiting on?”, “Summarize the week's Projects,” or “Archive that task.”
 
 ## Updating
 
