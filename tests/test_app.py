@@ -100,3 +100,23 @@ def test_activity_reporting_backdated(client):
     assert result.status_code==201
     report=client.get("/api/activity/report?period=quarter&anchor=2026-07-10T12:00:00Z").json()
     assert any(event["body"]=="Worked on a draft" for event in report["events"])
+
+def test_database_folder_move_and_verified_switch(tmp_path,monkeypatch):
+    from tend import storage,store
+    monkeypatch.delenv("TEND_DB",raising=False)
+    old=tmp_path/"old.sqlite3"
+    newdir=tmp_path/"new"
+    newdir.mkdir()
+    monkeypatch.setattr(storage,"config_path",lambda:tmp_path/"storage.json")
+    monkeypatch.setattr(storage,"active_path",lambda:old if not storage.load().get("active") else __import__("pathlib").Path(storage.load()["active"]))
+    # Ensure a real populated database is migrated with the SQLite backup API.
+    with __import__("sqlite3").connect(old) as c:
+        c.execute("CREATE TABLE sample(value TEXT)")
+        c.execute("INSERT INTO sample VALUES ('preserved')")
+    pending=storage.stage(str(newdir),"move")
+    assert pending["pending"]==str(newdir/"old.sqlite3")
+    storage.activate_pending()
+    assert storage.info()["current"]==str(newdir/"old.sqlite3")
+    with __import__("sqlite3").connect(newdir/"old.sqlite3") as c:
+        assert c.execute("SELECT value FROM sample").fetchone()[0]=="preserved"
+    assert old.exists()
