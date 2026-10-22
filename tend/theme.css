@@ -19,3 +19,6 @@ body{background:var(--page)!important;color:var(--text)!important}header,.main,.
 
 /* No decorative highlights or shadows. */
 .column,.card,.card:hover,.item,.bubble,.sendrow,.panel{box-shadow:none!important;text-shadow:none!important;filter:none!important}
+
+/* Subtle agent message tint, without shadow or glow. */
+.bubble.assistant{background:color-mix(in srgb,var(--soft) 28%,var(--panel))!important;border:1px solid var(--line)!important;box-shadow:none!important}
