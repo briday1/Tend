@@ -81,6 +81,18 @@ def set_task_due_action(thread_id:str,action:str="activity_report",period:str="w
 def run_task_due_action(thread_id:str,anchor:str="")->dict:
     """Preview a task's linked reporting action, without any AI or modifying its recurrence."""
     return db.report_for_task(thread_id,anchor or None)
+@mcp.tool()
+def archive_task(thread_id:str)->dict:
+    """Archive a task without deleting history."""
+    return db.archive_thread(thread_id,True)
+@mcp.tool()
+def restore_task(thread_id:str)->dict:
+    """Restore an archived task."""
+    return db.archive_thread(thread_id,False)
+@mcp.tool()
+def list_archived_tasks(query:str="")->list[dict]:
+    """Search archived task records."""
+    return db.archived_threads(query)
 if __name__=="__main__":
     db.init()
     mcp.run(transport="streamable-http" if "--http" in sys.argv else "stdio")
