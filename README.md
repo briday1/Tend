@@ -158,3 +158,9 @@ Get-CimInstance Win32_Process | Where-Object { $_.ProcessId -in (Get-NetTCPConne
 ```
 
 Verify the process command line really belongs to Tend before stopping it. Then close its original command window or stop **that specific verified PID** using `Stop-Process -Id <PID>` and relaunch the shortcut. Don't terminate all Python processes indiscriminately; other Python apps may be running. If the old Tend supervisor automatically relaunches the web worker, shut down that supervisor too using its known terminal/session before restarting.
+
+### Diagnosing background service exits
+
+The Tend supervisor now records the **specific child service** (web, MCP, or notifications) and process exit code when a service stops, and restarts it up to three times in a two-minute window. Repeated failures still stop the supervisor rather than creating an infinite restart loop. Check `%USERPROFILE%\.tend\server.log` for supervisor messages and `%USERPROFILE%\.tend\services.log` for subprocess errors. `KeyboardInterrupt` following Ctrl+C is expected when stopping a terminal-launched process; it does not by itself prove a code defect.
+
+If your Tend database lives inside a OneDrive-synchronized folder, avoid concurrent synchronization or simultaneous Tend instances against the live SQLite file. A local folder plus regular SQLite backups is safer.
