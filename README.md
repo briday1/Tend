@@ -230,3 +230,17 @@ Because `tend/native.py` changed, **rebuild the native executable** after pullin
 ## Archiving tasks
 
 In **Tasks**, use **Archive task** in a task's detail panel. Archived tasks are retained in SQLite with their notes, activity history, and schedule, but hidden from the normal Tasks list, daily attention, and scheduled reminders. Use **View archive** above the category list to browse and search archived tasks, then **Restore task** to return one to the active list. The assistant can archive or restore tasks upon explicit request or clear indication that an item should be put away; this is not automatic cleanup of recurring work. MCP exposes `archive_task`, `restore_task`, and `list_archived_tasks`. Task headings show their current matching counts inline, like **All Tasks (4)**. Task rows use compact, single-title-first styling.
+
+## Visual UI reference screenshots
+
+The repository includes `scripts/capture_screenshots.py` and a manually triggered GitHub Actions workflow, **Refresh Tend UI screenshots**. The script creates an isolated temporary SQLite database containing synthetic task and conversation examples, launches a local Tend web server on port 18765, captures Chromium screenshots with Playwright, and shuts the temporary server down. It never uses your personal Tend database or AI provider key. Screenshot files are written to `docs/screenshots/`: `conversation.png`, `tasks.png`, `task-details.png`, and `archive.png`.
+
+To generate them locally:
+
+```powershell
+.\\.venv\\Scripts\\python.exe -m pip install playwright
+.\\.venv\\Scripts\\python.exe -m playwright install chromium
+.\\.venv\\Scripts\\python.exe scripts\\capture_screenshots.py
+```
+
+Commit those generated PNGs if you want to keep them in GitHub. Alternatively, run **GitHub → Actions → Refresh Tend UI screenshots → Run workflow**; the workflow generates and commits updated reference images on the default branch. These screenshots are reproducible examples rather than live captures from your Windows machine. When discussing UI issues in ChatGPT, link the corresponding `docs/screenshots/*.png` file or attach the image so we can inspect the actual layout. Screenshots should be regenerated after relevant UI changes.
