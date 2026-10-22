@@ -9,6 +9,7 @@ from typing import Literal
 from . import store as db
 from . import ai
 from . import commands
+from . import storage
 from .rendering import render
 from .ai import reflect
 
@@ -136,3 +137,31 @@ def brief():return {"text":db.daily_brief(),"html":render(db.daily_brief())}
 
 @app.get("/api/attention")
 def attention(force:bool=False):return ai.attention(force)
+
+class ActivityInput(BaseModel):
+    body:str=Field(min_length=1,max_length=10000)
+    kind:Literal["progress","feedback","decision","blocker","milestone","other"]="progress"
+    occurred_at:datetime|None=None
+
+class StorageLocation(BaseModel):
+    path:str=Field(min_length=1,max_length=2048)
+
+@app.post("/api/threads/{id}/activity",status_code=201)
+def add_activity(id:str,data:ActivityInput):
+    try:
+        result=db.record_activity(id,data.body,data.kind,data.occurred_at.isoformat() if data.occurred_at else None)
+        return found(result)
+    except ValueError as exc:raise HTTPException(422,str(exc)) from None
+
+@app.get("/api/activity/report")
+def report(period:Literal["week","month","quarter","year"]="week",anchor:datetime|None=None):
+    try:return db.activity_report(period,anchor.isoformat() if anchor else None)
+    except ValueError as exc:raise HTTPException(422,str(exc)) from None
+
+@app.get("/api/storage")
+def storage_info():return storage.info()
+
+@app.post("/api/storage")
+def stage_storage(data:StorageLocation):
+    try:return storage.stage(data.path)
+    except ValueError as exc:raise HTTPException(422,str(exc)) from None
