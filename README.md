@@ -79,23 +79,38 @@ Open **Settings → Database location → Move current database → Browse…**.
 
 The other option, **Use an existing Tend database**, accepts an existing full database filename and validates it before switching. Database relocation is available when launched through the `tend` command; starting only `uvicorn` bypasses the supervisor that handles automatic restarts. A desktop folder chooser requires an active GUI session on the local host. Backing up the live database should be done via Tend's SQLite backup feature rather than direct file synchronization.
 
-## Windows desktop app shortcut
+## Install Tend as a Windows desktop app (recommended)
 
-Tend can run as a dedicated desktop-style browser window rather than a normal tab. In the cloned repository, first install the editable package into the virtual environment:
+Requires Windows 10/11, Python 3.11+, Git, and Microsoft Edge or Google Chrome. These instructions install Tend locally; no hosted service or cloud database is required.
+
+Open **PowerShell** and run:
 
 ```powershell
+git clone https://github.com/briday1/Tend.git
+cd Tend
+py -3 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -e .
 powershell -ExecutionPolicy Bypass -File .\install-desktop.ps1
 ```
 
-This adds a **Tend** shortcut to your Windows Desktop. Double-click it to:
-1. Check `http://127.0.0.1:8765/api/health` for the Tend signature.
-2. Start the local web, MCP, and reminder servers **only if Tend is not already running**.
-3. Wait until the web server responds, then open Tend in an Edge/Chrome `--app` window (without a normal browser tab or toolbar).
+A **Tend** shortcut appears on your Windows desktop. Double-click **that shortcut** to launch Tend. It checks whether Tend is already running, starts the Python web server, MCP server, and reminder worker if necessary, waits until the web server is ready, and opens a standalone Edge/Chrome app window. You do **not** need to start `tend.exe` manually each time.
 
-You can also use your browser's **Install app** option thanks to `manifest.webmanifest`, but a browser-installed web-app icon **cannot start Python servers on its own**. Use the Windows **Tend** shortcut above as the reliable one-click launcher.
+For an existing installation, update it with:
 
-Tend runs locally on loopback only. The new shortcut launches a detached local server that persists after you close the window, so desktop reminders can continue while the process is running. End the Tend processes or restart Windows to stop it; an explicit tray stop control is not implemented yet. Startup issues are logged in `~/.tend/server.log` or `~/.tend/desktop-launch.log`.
+```powershell
+cd Tend
+git pull
+.\.venv\Scripts\python.exe -m pip install -e .
+powershell -ExecutionPolicy Bypass -File .\install-desktop.ps1
+```
+
+**Important: Windows launcher vs browser-installed PWA.** Chrome/Edge's **Install app** option produces a browser-only shortcut that opens `http://127.0.0.1:8765`; it **cannot launch Python**. If the Tend server is stopped, that shortcut will show a connection error. Use the desktop shortcut created by `install-desktop.ps1` for automatic startup. Unpin or uninstall the browser-only shortcut if you have both and cannot tell them apart.
+
+Tend uses local-only loopback connections. The server continues running after you close the app window so scheduled desktop notifications can work. To stop it, end the Tend processes or restart Windows; a tray stop control has not been implemented yet.
+
+### Troubleshooting
+
+If the desktop shortcut doesn't open Tend, first try running `.\.venv\Scripts\python.exe -m tend.desktop` from PowerShell to see the error. Check `%USERPROFILE%\.tend\server.log` and `%USERPROFILE%\.tend\desktop-launch.log` for startup details. If Python is missing, install Python 3.11+ and recreate the virtual environment before rerunning the installer.
 
 ## Notification planning without background AI usage
 
