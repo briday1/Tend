@@ -212,14 +212,6 @@ def chat(message, progress=None):
                 status(labels.get(name,"Tool operation")+(" — done" if not isinstance(result,dict) or "error" not in result else " — failed"))
                 used.append(name)
             transcript.append({"role":"tool","tool_call_id":call.get("id",""),"content":json.dumps(result,default=str)})
-        # Only interrupt a cycle consisting entirely of repeated calls.
-        # There is no local numeric action limit.
-        if redundant:
-            status("Preparing response from completed operations")
-            transcript.append({"role":"system","content":"Do not call any more tools. Summarize exactly what was confirmed by preceding tool results; distinguish failures from successes."})
-            final=request(transcript,tools=False,progress=status)
-            result=final.get("choices",[{}])[0].get("message",{}).get("content")
-            return {"answer":result or "The tool process stopped after repeated calls. Review the completed operations above.","actions":used}
         status("Checking next steps")
 
 def reflect(question):
