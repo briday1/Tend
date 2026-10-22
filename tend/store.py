@@ -1,4 +1,4 @@
-import os, sqlite3
+import os, sqlite3, json
 from pathlib import Path
 from uuid import uuid4
 from datetime import datetime, timezone
@@ -29,12 +29,14 @@ CREATE TABLE IF NOT EXISTS activity(id TEXT PRIMARY KEY,thread_id TEXT NOT NULL 
         if "due_at" not in columns:c.execute("ALTER TABLE threads ADD COLUMN due_at TEXT")
         if "recurrence" not in columns:c.execute("ALTER TABLE threads ADD COLUMN recurrence TEXT")
         if "next_occurrence" not in columns:c.execute("ALTER TABLE threads ADD COLUMN next_occurrence TEXT")
+        if "due_action" not in columns:c.execute("ALTER TABLE threads ADD COLUMN due_action TEXT")
+        if "action_config" not in columns:c.execute("ALTER TABLE threads ADD COLUMN action_config TEXT")
 def query(sql,args=()):
     with conn() as c: return [dict(r) for r in c.execute(sql,args)]
 def get(id):
     rows=query("SELECT * FROM threads WHERE id=?",(id,))
     if not rows:return None
-    t=rows[0];t["entries"]=query("SELECT * FROM entries WHERE thread_id=? ORDER BY created_at,id",(id,))
+    t=rows[0];t["action_config"]=json.loads(t["action_config"] or "{}");t["entries"]=query("SELECT * FROM entries WHERE thread_id=? ORDER BY created_at,id",(id,))
     t["activity"]=query("SELECT * FROM activity WHERE thread_id=? ORDER BY occurred_at DESC,recorded_at DESC",(id,))
     t["related"]=query("SELECT t.id,t.title FROM relations r JOIN threads t ON t.id=CASE WHEN r.a=? THEN r.b ELSE r.a END WHERE r.a=? OR r.b=?",(id,id,id))
     return t
@@ -44,6 +46,7 @@ def list_threads(q=""):
         t["attention_due"]=bool(t["revisit_at"] and t["revisit_at"]<=now() and t["state"]!="settled")
         t["deadline_due"]=bool(t.get("due_at") and t["due_at"][:10]<=now()[:10] and t["state"]!="settled")
         t["due"]=t["attention_due"]
+    for t in rows:t["action_config"]=json.loads(t["action_config"] or "{}")
     return sorted(rows,key=lambda t:not t["due"])
 def create(title,summary=""):
     if not title.strip():raise ValueError("Title required")
@@ -51,9 +54,17 @@ def create(title,summary=""):
     with conn() as c:c.execute("INSERT INTO threads(id,title,summary,created_at,updated_at) VALUES(?,?,?,?,?)",(id,title.strip(),summary,t,t))
     return get(id)
 def update(id,fields):
-    allowed={"title","summary","state","revisit_at","due_at","category","recurrence","next_occurrence"}
+    allowed={"title","summary","state","revisit_at","due_at","category","recurrence","next_occurrence","due_action","action_config"}
     fields={k:v for k,v in fields.items() if k in allowed}
     if "recurrence" in fields and fields["recurrence"] not in (None,"daily","weekly","monthly","quarterly","yearly"):raise ValueError("Invalid recurrence")
+    if "due_action" in fields and fields["due_action"] not in (None,"activity_report"):raise ValueError("Invalid due action")
+    if "action_config" in fields:
+        v=fields["action_config"]
+        if not isinstance(v,dict):raise ValueError("Action config must be an object")
+        if set(v)-{"period","category"}:raise ValueError("Unsupported action configuration")
+        if v.get("period","week") not in ("week","month","quarter","year"):raise ValueError("Invalid reporting period")
+        if "category" in v and (not isinstance(v["category"],str) or len(v["category"])>80):raise ValueError("Invalid report category")
+        fields["action_config"]=json.dumps(v)
     if "category" in fields and (not isinstance(fields["category"],str) or not fields["category"].strip() or len(fields["category"])>80):raise ValueError("Invalid category")
     if "state" in fields and fields["state"] not in {"open","waiting","paused","settled"}:raise ValueError("Invalid state")
     if "title" in fields and not fields["title"].strip():raise ValueError("Title required")
@@ -106,14 +117,16 @@ def claim_notifications():
     current=datetime.now(timezone.utc)
     claimed=[]
     with conn() as c:
-        rows=c.execute("SELECT id,title,revisit_at FROM threads WHERE revisit_at IS NOT NULL AND state!='settled' AND (notified_for IS NULL OR notified_for!=revisit_at)").fetchall()
+        rows=c.execute("SELECT id,title,revisit_at,due_action,action_config FROM threads WHERE revisit_at IS NOT NULL AND state!='settled' AND (notified_for IS NULL OR notified_for!=revisit_at)").fetchall()
         for row in rows:
             try:due=datetime.fromisoformat(row["revisit_at"].replace("Z","+00:00"))
             except ValueError:continue
             if due.tzinfo is None:continue
             if current-timedelta(hours=24)<=due<=current and len(claimed)<3:
                 c.execute("UPDATE threads SET notified_for=? WHERE id=?",(row["revisit_at"],row["id"]))
-                claimed.append(dict(row))
+                item=dict(row)
+                if item["due_action"]=="activity_report":item["report"]=report_for_task(item["id"],anchor=item["revisit_at"])
+                claimed.append(item)
     return claimed
 
 def daily_brief():
