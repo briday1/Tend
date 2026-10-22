@@ -21,7 +21,7 @@ def healthy():
     try:
         with urlopen(f"http://127.0.0.1:{port()}/api/health",timeout=0.75) as response:
             data=json.load(response)
-            return response.status==200 and data.get("app")=="tend" and data.get("streaming_chat") is True
+            return response.status==200 and data.get("app")=="tend" and data.get("streaming_chat") is True and data.get("tool_runner")=="unbounded-v2"
     except (OSError,ValueError,URLError):
         return False
 
