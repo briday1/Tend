@@ -28,7 +28,7 @@ function appendSnapshot(target,html){
  const anchor=[...temp.querySelectorAll('a[href]')].find(a=>a.getAttribute('href').startsWith('/snapshots?'));
  if(!anchor)return;
  const url=new URL(anchor.getAttribute('href'),location.origin);
- if(url.origin!==location.origin||!/^\\d{4}-\\d{2}-\\d{2}$/.test(url.searchParams.get('start')||'')||!/^\\d{4}-\\d{2}-\\d{2}$/.test(url.searchParams.get('end')||''))return;
+ if(url.origin!==location.origin||!/^\d{4}-\d{2}-\d{2}$/.test(url.searchParams.get('start')||'')||!/^\d{4}-\d{2}-\d{2}$/.test(url.searchParams.get('end')||''))return;
  url.searchParams.set('embed','1');
  const frame=el('iframe','snapshot-frame');frame.src=url.pathname+url.search;frame.title='Interactive Tend calendar snapshot';frame.loading='lazy';
  target.append(frame);target.classList.add('snapshot-answer');
