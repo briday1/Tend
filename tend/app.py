@@ -2,7 +2,7 @@ from pathlib import Path
 import re
 from datetime import datetime
 from fastapi import FastAPI,HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse,Response
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from pydantic import BaseModel,Field
 from typing import Literal
@@ -40,6 +40,13 @@ class Relation(BaseModel):
 def found(x):
     if x is None:raise HTTPException(404,"Not found")
     return x
+@app.get("/icon/{size}.png")
+def icon_png(size:int):
+    if size not in (16,32,48,64,128,192,256,512):
+        raise HTTPException(404,"Icon size unavailable")
+    from .windows_icon import raster
+    return Response(raster(size),media_type="image/png",headers={"Cache-Control":"public, max-age=3600"})
+
 @app.get("/favicon.svg")
 def favicon():return FileResponse(Path(__file__).with_name("favicon.svg"),media_type="image/svg+xml")
 @app.get("/theme.css")
