@@ -6,6 +6,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel,Field
 from typing import Literal
 from . import store as db
+from . import ai
 from .ai import reflect
 
 app=FastAPI(title="Tend")
@@ -63,6 +64,19 @@ def reflection(data:Ask):
 
 class Message(BaseModel):
     text:str=Field(min_length=1,max_length=6000)
+class Provider(BaseModel):
+    base_url:str
+    model:str
+    api_key:str|None=None
+    clear_key:bool=False
+
+@app.get("/api/settings")
+def settings():return ai.public_config()
+
+@app.post("/api/settings")
+def settings_save(data:Provider):
+    try:return ai.save(data.base_url,data.model,data.api_key,data.clear_key)
+    except ValueError as exc:raise HTTPException(422,str(exc)) from exc
 
 @app.get("/api/conversation")
 def history():return db.conversation()
@@ -71,17 +85,18 @@ def history():return db.conversation()
 def chat(data:Message):
     message=data.text.strip()
     if not message:raise HTTPException(422,"Message required")
+    try:result=ai.chat(message)
+    except ValueError as exc:raise HTTPException(502,str(exc)) from exc
     db.remember("user",message)
-    question=bool(re.search(r"\\?$",message)) or bool(re.match(r"^(what|why|how|which|when|where|who|show|tell|remind me what|do i|did i|have i|can you|could you|let's review)\\b",message,re.I))
-    if question:
-        try:
-            response=reflect(message)["answer"]
-        except ValueError as exc:
-            response="I couldn't reach the configured AI service. Your thoughts are still saved locally. "+str(exc)
-        mode="explore"
-    else:
-        thread=db.create(message[:300],message if len(message)>300 else "")
-        response="Kept that. You can add more whenever it comes back to mind."
-        mode="captured"
-    db.remember("assistant",response)
-    return {"answer":response,"mode":mode,"history":db.conversation()}
+    db.remember("assistant",result["answer"])
+    return {"answer":result["answer"],"actions":result["actions"],"history":db.conversation()}
+
+@app.get("/api/backup")
+def backup():
+    from fastapi.responses import FileResponse
+    from tempfile import NamedTemporaryFile
+    import sqlite3
+    file=NamedTemporaryFile(prefix="tend-backup-",suffix=".sqlite3",delete=False)
+    file.close()
+    with sqlite3.connect(db.path()) as src, sqlite3.connect(file.name) as dest:src.backup(dest)
+    return FileResponse(file.name,filename="tend-backup.sqlite3",media_type="application/octet-stream")
