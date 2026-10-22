@@ -73,11 +73,13 @@ def test_local_brief_and_command_reference(client):
 def test_claim_reminder_once(client):
     from tend import store
     t=store.create("Check local reminder")
-    store.update(t["id"],{"revisit_at":"2020-01-01T00:00:00+00:00"})
+    from datetime import datetime,timezone,timedelta
+    moment=(datetime.now(timezone.utc)-timedelta(minutes=2)).isoformat()
+    store.update(t["id"],{"revisit_at":moment})
     found=store.claim_notifications()
     assert any(row["id"]==t["id"] for row in found)
     assert all(row["id"]!=t["id"] for row in store.claim_notifications())
-    store.update(t["id"],{"revisit_at":"2020-01-02T00:00:00+00:00"})
+    store.update(t["id"],{"revisit_at":(datetime.now(timezone.utc)-timedelta(minutes=1)).isoformat()})
     assert any(row["id"]==t["id"] for row in store.claim_notifications())
 
 def test_attention_empty_and_commands_without_api_key(client,monkeypatch):
