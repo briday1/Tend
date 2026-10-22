@@ -139,3 +139,20 @@ def test_notification_worker_has_no_ai_dependency():
     assert "nudges" not in source
     assert "ai.request" not in source
     assert "claim_notifications" in source
+
+def test_stream_reports_status_and_completion(client,monkeypatch):
+    from tend import ai
+    def fake_chat(message,progress=None):
+        if progress:
+            progress("Connecting to AI provider…")
+            progress("Tool: overview — completed")
+        return {"answer":"Found **two** items","actions":["overview"]}
+    monkeypatch.setattr(ai,"chat",fake_chat)
+    response=client.post("/api/chat/stream",json={"text":"What am I tracking?"})
+    assert response.status_code==200
+    import json
+    events=[json.loads(line) for line in response.text.splitlines()]
+    assert events[0]["type"]=="status"
+    assert events[1]["message"]=="Tool: overview — completed"
+    assert events[-1]["type"]=="done"
+    assert "<strong>two</strong>" in events[-1]["answer_html"]
