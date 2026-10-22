@@ -129,10 +129,13 @@ def main():
     except KeyboardInterrupt:
         pass
     finally:
+        # Stop each service's descendants before the direct process. On Windows
+        # venv Python may spawn a second base-interpreter process per service.
+        from .shutdown import stop_process_tree
         for child in children:
-            if child.poll() is None:child.terminate()
-        for child in children:
-            try:child.wait(timeout=5)
-            except subprocess.TimeoutExpired:child.kill()
+            try:
+                stop_process_tree(child.pid,log=lambda message:print(message,flush=True))
+            except Exception as exc:
+                print("Tend shutdown warning:",str(exc),flush=True)
 
 if __name__=="__main__":main()
