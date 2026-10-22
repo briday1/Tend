@@ -129,3 +129,6 @@ def rendered_history():
 def command_reference():return commands.COMMANDS
 @app.get("/api/brief")
 def brief():return {"text":db.daily_brief(),"html":render(db.daily_brief())}
+
+@app.get("/api/attention")
+def attention(force:bool=False):return ai.attention(force)
