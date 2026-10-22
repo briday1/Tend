@@ -39,7 +39,7 @@ async function processQueue(){
   pending.textContent='Thinking…';
   try{
    const response=await fetch('/api/chat/stream',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:job.text})});
-   if(!response.ok)throw Error('Connection failed (HTTP '+response.status+')');
+   if(!response.ok)throw Error(response.status===404?'Tend is connected to an older server without streaming chat. Close the old Tend Python processes and relaunch Tend.':'Connection failed (HTTP '+response.status+')');
    if(!response.body)throw Error('Streaming not supported by this browser');
    const reader=response.body.getReader(),decoder=new TextDecoder();
    let buffer='',finished=false,steps=[];
