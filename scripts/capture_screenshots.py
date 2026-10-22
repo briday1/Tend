@@ -13,6 +13,7 @@ import sys
 import tempfile
 import time
 from pathlib import Path
+from datetime import date, timedelta
 from urllib.request import urlopen
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -47,6 +48,13 @@ def make_demo(db):
     archived = store.create("Completed onboarding checklist")
     store.update(archived["id"], {"category": "Operations"})
     store.archive_thread(archived["id"])
+    next_monday=date.today()+timedelta(days=7-date.today().weekday())
+    for title,cat,offset in [("Prepare briefing notes","Projects",0),("Investigate dashboard bug","Product",2),("Renew development certificate","Operations",4)]:
+        matches=[t for t in store.list_threads() if t["title"]==title]
+        if matches:store.update(matches[0]["id"],{"due_at":(next_monday+timedelta(days=offset)).isoformat()+"T12:00:00Z"})
+    from tend.snapshot_intent import respond
+    store.remember("user","give me my next week snapshot")
+    store.remember("assistant",respond("give me my next week snapshot")["answer"])
     store.remember("user", "What needs my attention this week?")
     store.remember("assistant", "There are a few active items in **Projects** and **Operations**. The weekly activity report is scheduled, and milestone review is waiting on input.")
     return report["id"]
@@ -94,7 +102,14 @@ def main():
                     status=200, content_type="application/json",
                     body='{"items":[],"source":"demo"}'))
                 page.goto(base + "/", wait_until="networkidle")
+                page.locator(".snapshot-frame").first.wait_for()
                 page.screenshot(path=str(OUT / "conversation.png"), full_page=True)
+                page.goto(base + "/snapshots", wait_until="networkidle")
+                page.locator(".day").first.wait_for()
+                page.screenshot(path=str(OUT / "snapshot-week.png"), full_page=True)
+                with page.expect_download() as download_info:
+                    page.locator("#png").click()
+                assert download_info.value.suggested_filename.endswith(".png")
                 page.goto(base + "/board", wait_until="networkidle")
                 page.locator(".task-row").first.wait_for()
                 page.screenshot(path=str(OUT / "tasks.png"), full_page=True)
