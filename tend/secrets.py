@@ -2,14 +2,20 @@
 import os
 import keyring
 from keyring.errors import KeyringError
-from . import store
 
 SERVICE="tend-local-assistant"
 ACCOUNT="provider-api-key"
 
 def _vault():
     backend=keyring.get_keyring()
-    if getattr(backend,"priority",0)<=0:
+    kind=type(backend)
+    module=kind.__module__.lower()
+    name=kind.__name__.lower()
+    secure=(module.startswith("keyring.backends.windows") or
+            module.startswith("keyring.backends.mac") or
+            module.startswith("keyring.backends.secretservice") or
+            module.startswith("keyring.backends.kwallet"))
+    if not secure or getattr(backend,"priority",0)<=0:
         raise ValueError("No secure OS credential vault available. Configure an environment variable instead.")
     return backend
 
