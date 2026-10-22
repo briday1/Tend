@@ -152,7 +152,8 @@ def history():return db.conversation()
 def chat(data:Message):
     message=data.text.strip()
     if not message:raise HTTPException(422,"Message required")
-    try:result=commands.execute(message) if message.startswith("/") else ai.chat(message)
+    try:from .snapshot_intent import respond as snapshot_respond
+    result=snapshot_respond(message) or (commands.execute(message) if message.startswith("/") else ai.chat(message))
     except ValueError as exc:raise HTTPException(502,str(exc)) from exc
     db.remember("user",message)
     db.remember("assistant",result["answer"])
@@ -241,14 +242,17 @@ def chat_stream(data:Message):
         q=queue.Queue()
         def worker():
             try:
-                if message.startswith("/"):
-                    result=commands.execute(message)
-                    if result is None:raise ValueError("Unknown command. Type /help.")
-                else:
-                    result=ai.chat(message,progress=lambda value:q.put({"type":"status","message":value}))
+                from .snapshot_intent import respond as snapshot_respond
+                result=snapshot_respond(message)
+                if result is None:
+                    if message.startswith("/"):
+                        result=commands.execute(message)
+                        if result is None:raise ValueError("Unknown command. Type /help.")
+                    else:
+                        result=ai.chat(message,progress=lambda value:q.put({"type":"status","message":value}))
                 db.remember("user",message)
                 db.remember("assistant",result["answer"])
-                q.put({"type":"done","answer":result["answer"],"answer_html":render(result["answer"])})
+                q.put({"type":"done","answer":result["answer"],"answer_html":render(result["answer"]),"snapshot":result.get("snapshot")})
             except Exception as exc:
                 # Do not send raw provider exceptions or traceback to clients.
                 q.put({"type":"error","message":str(exc) if isinstance(exc,ValueError) else "Assistant request failed. Check Tend server logs."})
