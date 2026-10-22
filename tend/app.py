@@ -1,4 +1,5 @@
 from pathlib import Path
+import re
 from datetime import datetime
 from fastapi import FastAPI,HTTPException
 from fastapi.responses import FileResponse
@@ -59,3 +60,28 @@ def link(id:str,data:Relation):
 def reflection(data:Ask):
     try:return reflect(data.question)
     except ValueError as exc:raise HTTPException(502,str(exc)) from exc
+
+class Message(BaseModel):
+    text:str=Field(min_length=1,max_length=6000)
+
+@app.get("/api/conversation")
+def history():return db.conversation()
+
+@app.post("/api/chat")
+def chat(data:Message):
+    message=data.text.strip()
+    if not message:raise HTTPException(422,"Message required")
+    db.remember("user",message)
+    question=bool(re.search(r"\\?$",message)) or bool(re.match(r"^(what|why|how|which|when|where|who|show|tell|remind me what|do i|did i|have i|can you|could you|let's review)\\b",message,re.I))
+    if question:
+        try:
+            response=reflect(message)["answer"]
+        except ValueError as exc:
+            response="I couldn't reach the configured AI service. Your thoughts are still saved locally. "+str(exc)
+        mode="explore"
+    else:
+        thread=db.create(message[:300],message if len(message)>300 else "")
+        response="Kept that. You can add more whenever it comes back to mind."
+        mode="captured"
+    db.remember("assistant",response)
+    return {"answer":response,"mode":mode,"history":db.conversation()}
