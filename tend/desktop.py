@@ -42,10 +42,13 @@ def main():
     if sys.platform!="win32":
         raise SystemExit("Desktop launcher currently supports Windows.")
     if not healthy():
+        # Launch the service supervisor with pythonw.exe, not console python.exe.
+        # With stdout/stderr redirected it has no reason to create a console.
         py=sys.executable
-        if py.lower().endswith("pythonw.exe"):
-            py=py[:-len("pythonw.exe")]+"python.exe"
-        flags=getattr(subprocess,"CREATE_NO_WINDOW",0)|getattr(subprocess,"DETACHED_PROCESS",0)
+        if py.lower().endswith("python.exe"):
+            candidate=py[:-len("python.exe")]+"pythonw.exe"
+            if Path(candidate).is_file():py=candidate
+        flags=getattr(subprocess,"CREATE_NO_WINDOW",0)|getattr(subprocess,"CREATE_NEW_PROCESS_GROUP",0)
         env=os.environ.copy()
         env["TEND_NO_BROWSER"]="1"
         logs=Path.home()/".tend"/"server.log"
