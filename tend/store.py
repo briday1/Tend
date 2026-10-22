@@ -38,7 +38,8 @@ def get(id):
     return t
 def list_threads(q=""):
     rows=query("SELECT t.*,(SELECT COUNT(*) FROM entries e WHERE e.thread_id=t.id) entry_count FROM threads t WHERE title LIKE ? OR summary LIKE ? OR EXISTS(SELECT 1 FROM entries e WHERE e.thread_id=t.id AND e.body LIKE ?) ORDER BY updated_at DESC",("%"+q+"%",)*3)
-    for t in rows:t["attention_due"]=bool(t["revisit_at"] and t["revisit_at"]<=now() and t["state"]!="settled")
+    for t in rows:
+        t["attention_due"]=bool(t["revisit_at"] and t["revisit_at"]<=now() and t["state"]!="settled")
         t["deadline_due"]=bool(t.get("due_at") and t["due_at"][:10]<=now()[:10] and t["state"]!="settled")
         t["due"]=t["attention_due"]
     return sorted(rows,key=lambda t:not t["due"])
