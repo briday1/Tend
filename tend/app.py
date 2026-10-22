@@ -28,6 +28,8 @@ class Change(BaseModel):
     state:Literal["open","waiting","paused","settled"]|None=None
     revisit_at:datetime|None=None
     due_at:datetime|None=None
+    recurrence:Literal["daily","weekly","monthly","quarterly","yearly"]|None=None
+    next_occurrence:datetime|None=None
 class Entry(BaseModel):
     kind:Literal["thought","question","action","decision","update"]="thought"
     body:str=Field(min_length=1)
@@ -61,7 +63,7 @@ def get(id:str):return found(db.get(id))
 @app.patch("/api/threads/{id}")
 def change(id:str,data:Change):
     fields=data.model_dump(exclude_unset=True)
-    for field in ("revisit_at","due_at"):
+    for field in ("revisit_at","due_at","next_occurrence"):
         if fields.get(field):fields[field]=fields[field].isoformat()
     return found(db.update(id,fields))
 @app.delete("/api/threads/{id}")
@@ -171,3 +173,12 @@ def stage_storage(data:StorageLocation):
 def select_storage_folder():
     try:return storage.choose_folder()
     except ValueError as exc:raise HTTPException(503,str(exc)) from None
+
+class Occurrence(BaseModel):
+    description:str="Completed recurring occurrence"
+@app.post("/api/threads/{id}/complete-occurrence")
+def complete_recurring(id:str,data:Occurrence):
+    try:return db.complete_occurrence(id,data.description)
+    except ValueError as exc:raise HTTPException(422,str(exc)) from None
+@app.get("/api/recurring")
+def recurring():return {"due":db.recurring_due(),"all":[t for t in db.list_threads() if t.get("recurrence")]}
