@@ -20,6 +20,8 @@ CREATE TABLE IF NOT EXISTS entries(id TEXT PRIMARY KEY,thread_id TEXT NOT NULL R
 CREATE TABLE IF NOT EXISTS relations(a TEXT NOT NULL REFERENCES threads(id) ON DELETE CASCADE,b TEXT NOT NULL REFERENCES threads(id) ON DELETE CASCADE,PRIMARY KEY(a,b));
 CREATE TABLE IF NOT EXISTS conversation(id TEXT PRIMARY KEY,role TEXT NOT NULL,body TEXT NOT NULL,created_at TEXT NOT NULL);
 """)
+        columns={row[1] for row in c.execute("PRAGMA table_info(threads)")}
+        if "category" not in columns:c.execute("ALTER TABLE threads ADD COLUMN category TEXT NOT NULL DEFAULT 'Unsorted'")
 def query(sql,args=()):
     with conn() as c: return [dict(r) for r in c.execute(sql,args)]
 def get(id):
@@ -38,8 +40,9 @@ def create(title,summary=""):
     with conn() as c:c.execute("INSERT INTO threads(id,title,summary,created_at,updated_at) VALUES(?,?,?,?,?)",(id,title.strip(),summary,t,t))
     return get(id)
 def update(id,fields):
-    allowed={"title","summary","state","revisit_at"}
+    allowed={"title","summary","state","revisit_at","category"}
     fields={k:v for k,v in fields.items() if k in allowed}
+    if "category" in fields and (not isinstance(fields["category"],str) or not fields["category"].strip() or len(fields["category"])>80):raise ValueError("Invalid category")
     if "state" in fields and fields["state"] not in {"open","waiting","paused","settled"}:raise ValueError("Invalid state")
     if "title" in fields and not fields["title"].strip():raise ValueError("Title required")
     if fields:
@@ -76,3 +79,10 @@ def remember(role,body):
     id=uuid4().hex
     with conn() as c:c.execute("INSERT INTO conversation(id,role,body,created_at) VALUES(?,?,?,?)",(id,role,body,now()))
     return id
+
+def board():
+    groups={}
+    for t in list_threads():
+        category=t.get("category") or "Unsorted"
+        groups.setdefault(category,[]).append(t)
+    return [{"name":name,"threads":items} for name,items in sorted(groups.items(),key=lambda x:(x[0]=="Unsorted",x[0].casefold()))]
