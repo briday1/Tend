@@ -103,8 +103,11 @@ def main():
                     body='{"items":[],"source":"demo"}'))
                 page.goto(base + "/", wait_until="networkidle")
                 page.locator(".snapshot-frame").first.wait_for()
+                page.locator(".snapshot-frame").first.content_frame.locator(".day").first.wait_for()
                 page.screenshot(path=str(OUT / "conversation.png"), full_page=True)
-                page.goto(base + "/snapshots", wait_until="networkidle")
+                week_start=date.today()+timedelta(days=7-date.today().weekday())
+                week_end=week_start+timedelta(days=6)
+                page.goto(base + "/snapshots?start="+week_start.isoformat()+"&end="+week_end.isoformat(), wait_until="networkidle")
                 page.locator(".day").first.wait_for()
                 page.screenshot(path=str(OUT / "snapshot-week.png"), full_page=True)
                 with page.expect_download() as download_info:
