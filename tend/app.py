@@ -63,6 +63,14 @@ def health():return {"app":"tend","status":"ok","streaming_chat":True,"board_cat
 def manifest():return FileResponse(Path(__file__).with_name("manifest.webmanifest"),media_type="application/manifest+json")
 @app.get("/")
 def home():return FileResponse(Path(__file__).with_name("index.html"))
+@app.get("/snapshots")
+def snapshots_page():return FileResponse(Path(__file__).with_name("snapshot.html"))
+@app.get("/api/snapshot")
+def snapshot_api(start:str,end:str,category:str=""):
+    from .snapshots import snapshot
+    try:return snapshot(start,end,category)
+    except ValueError as exc:raise HTTPException(422,str(exc)) from None
+
 @app.get("/board")
 def board_page():return FileResponse(Path(__file__).with_name("board.html"))
 @app.get("/api/board")
