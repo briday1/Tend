@@ -14,7 +14,7 @@ $shortcut.Arguments = '-m tend.desktop'
 $shortcut.WorkingDirectory = $repo
 $shortcut.Description = 'Launch Tend, starting its local services if necessary'
 $shortcut.WindowStyle = 1 # Normal app launch; pythonw has no console window
-$icon = Join-Path $repo 'tend.ico'
+$icon = Join-Path $repo 'tend-horizon.ico'
 $python = Join-Path $repo '.venv\Scripts\python.exe'
 & $python -m tend.windows_icon $icon
 if ($LASTEXITCODE -ne 0 -or -not (Test-Path $icon)) { throw 'Unable to generate Tend Windows icon.' }
