@@ -9,8 +9,16 @@ def run():
         for reminder in store.claim_notifications():
             try:
                 from plyer import notification
+                message=reminder["title"]
+                report=reminder.get("report")
+                if report:
+                    events=report["events"]
+                    scope=report.get("category") or "all categories"
+                    message+=f" — {report['count']} activities this {report['period']} ({scope})"
+                    if events:message+=": "+", ".join(row["body"] for row in events[:2])
+                if reminder.get("report_error"):message+=" — report unavailable"
                 notification.notify(title="Tend · Time to revisit",
-                    message=reminder["title"][:220],app_name="Tend",timeout=12)
+                    message=message[:220],app_name="Tend",timeout=12)
             except Exception as exc:
                 print("Desktop notification unavailable:",type(exc).__name__,flush=True)
         time.sleep(20)
