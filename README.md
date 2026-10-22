@@ -164,3 +164,7 @@ Verify the process command line really belongs to Tend before stopping it. Then 
 The Tend supervisor now records the **specific child service** (web, MCP, or notifications) and process exit code when a service stops, and restarts it up to three times in a two-minute window. Repeated failures still stop the supervisor rather than creating an infinite restart loop. Check `%USERPROFILE%\.tend\server.log` for supervisor messages and `%USERPROFILE%\.tend\services.log` for subprocess errors. `KeyboardInterrupt` following Ctrl+C is expected when stopping a terminal-launched process; it does not by itself prove a code defect.
 
 If your Tend database lives inside a OneDrive-synchronized folder, avoid concurrent synchronization or simultaneous Tend instances against the live SQLite file. A local folder plus regular SQLite backups is safer.
+
+### Fix for a desktop shortcut that silently fails to start Tend
+
+Older launcher builds invoked the service supervisor using `pythonw.exe`. The supervisor writes startup information to standard output, which can be missing under `pythonw.exe` on Windows. The desktop launcher now uses **`python.exe` with `CREATE_NO_WINDOW`**, redirecting output to `%USERPROFILE%\.tend\server.log`. The shortcut still uses `pythonw.exe` as its small, windowless launcher. Run `git pull` and reopen the desktop shortcut after closing any outdated Tend instances; this fix does not require reinstalling the shortcut. If it still fails, examine `desktop-launch.log`, `server.log`, and `services.log` in `%USERPROFILE%\.tend`.
