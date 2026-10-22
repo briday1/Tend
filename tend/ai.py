@@ -5,34 +5,50 @@ from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
 from . import store
+from . import secrets
 
 def config_path():
     return Path(os.environ.get("TEND_CONFIG",str(Path.home()/".tend"/"provider.json"))).expanduser()
 
+def _write_config(c):
+    target=config_path()
+    target.parent.mkdir(mode=0o700,parents=True,exist_ok=True)
+    # Atomic replacement prevents interruption from corrupting provider settings.
+    import tempfile
+    fd,name=tempfile.mkstemp(prefix=".provider-",dir=str(target.parent))
+    try:
+        with os.fdopen(fd,"w",encoding="utf-8") as f:
+            os.fchmod(f.fileno(),0o600) if hasattr(os,"fchmod") else None
+            json.dump(c,f)
+        os.replace(name,target)
+    finally:
+        if os.path.exists(name):os.unlink(name)
+
 def load():
-    try: return json.loads(config_path().read_text("utf-8"))
-    except (FileNotFoundError,ValueError): return {}
+    try: c=json.loads(config_path().read_text("utf-8"))
+    except (FileNotFoundError,ValueError):return {}
+    legacy=c.pop("api_key",None)
+    if legacy:
+        # Only remove the old plaintext copy after keyring confirms saving it.
+        secrets.set_key(legacy)
+        _write_config(c)
+    return c
 
 def public_config():
     c=load()
-    return {"base_url":c.get("base_url","https://api.openai.com/v1"),"model":c.get("model","gpt-4.1-mini"),
-            "has_key":bool(c.get("api_key") or os.environ.get("TEND_AI_API_KEY"))}
+    return {"base_url":c.get("base_url","https://api.openai.com/v1"),
+            "model":c.get("model","gpt-4.1-mini"),"has_key":bool(secrets.get())}
 
 def save(base_url,model,key=None,clear_key=False):
     p=urlparse(base_url.rstrip("/"))
     if p.scheme!="https" or not p.hostname or p.username or p.password or p.query or p.fragment:
         raise ValueError("Use an HTTPS provider endpoint")
-    if not model.strip(): raise ValueError("Model is required")
+    if not model.strip():raise ValueError("Model is required")
     c=load()
+    if clear_key:secrets.delete_key()
+    elif key:secrets.set_key(key)
     c.update({"base_url":base_url.rstrip("/"),"model":model.strip()})
-    if clear_key: c.pop("api_key",None)
-    elif key: c["api_key"]=key.strip()
-    file=config_path()
-    file.parent.mkdir(mode=0o700,parents=True,exist_ok=True)
-    fd=os.open(str(file),os.O_WRONLY|os.O_CREAT|os.O_TRUNC,0o600)
-    with os.fdopen(fd,"w",encoding="utf-8") as f:json.dump(c,f)
-    try: os.chmod(file,0o600)
-    except OSError:pass
+    _write_config(c)
     return public_config()
 
 def dispatch(name,args):
@@ -72,7 +88,7 @@ Do not delete data. Do not invent things the user has not said.
 """
 
 def request(messages,tools=True):
-    c=load(); key=os.environ.get("TEND_AI_API_KEY") or c.get("api_key")
+    c=load(); key=secrets.get()
     if not key:raise ValueError("Set your API key in Settings before chatting.")
     base=(os.environ.get("TEND_AI_BASE_URL") or c.get("base_url") or "https://api.openai.com/v1").rstrip("/")
     parsed=urlparse(base)
