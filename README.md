@@ -127,3 +127,7 @@ If you previously installed Tend through Chrome or Edge, unpin or uninstall that
 ### Windows command window stays open or closing it stops Tend
 
 Update the repository and reinstall the editable package, then **stop any Tend server previously started in PowerShell** before using the desktop shortcut. If a console-launched server is already running, the shortcut will correctly reuse that server; closing its PowerShell window will still stop it. Start a fresh instance through the desktop shortcut so the parent process is detached. The launcher now also starts its child web, MCP and notification Python processes with Windows no-console flags and sends their output to `%USERPROFILE%\.tend\services.log`. Server-supervisor logs are at `%USERPROFILE%\.tend\server.log`. Recreate the shortcut with `powershell -ExecutionPolicy Bypass -File .\install-desktop.ps1` if needed.
+
+### Fully windowless startup
+
+The Windows shortcut starts `pythonw.exe -m tend.desktop`; the desktop launcher now uses `pythonw.exe` for its detached service supervisor as well. All service output is redirected to `%USERPROFILE%\.tend\server.log` and `services.log`. The Tend app window is the only window that should appear. If you still see a command window, close any Tend process started earlier from PowerShell and recreate the shortcut with `install-desktop.ps1`. Do not launch `.venv\Scripts\tend.exe` to get background operation, because that is the terminal-oriented command.
