@@ -16,25 +16,19 @@ def raster(size):
         for x in range(size):
             u = (x + .5) * 64 / size
             v = (y + .5) * 64 / size
-            # Horizon: a cream tile with three clean, layered landscape bands.
-            corner=min(u,64-u)
-            vertical=min(v,64-v)
-            inside=(corner>=13 or vertical>=13 or (corner-13)**2+(vertical-13)**2<=169)
+            # Horizon: transparent pixels outside a circular landscape mark.
+            import math
             dx=u-32;dy=v-32
-            circle=dx*dx+dy*dy<=25*25
-            if not inside:
-                rgba=(0,0,0,0)
-            elif not circle:
-                rgba=(250,246,237,255)
-            else:
-                import math
-                wave1=31+4*math.sin((u-10)/10)
-                wave2=39+4*math.sin((u-7)/9)
-                wave3=48+4*math.sin((u-12)/8)
-                if v>=wave3:rgba=(40,77,62,255)
-                elif v>=wave2:rgba=(93,134,108,255)
-                elif v>=wave1:rgba=(140,171,150,255)
-                else:rgba=(201,217,198,255)
+            distance=math.hypot(dx,dy)
+            alpha=max(0,min(255,round((30.2-distance)*255)))
+            wave1=31+4*math.sin((u-10)/10)
+            wave2=39+4*math.sin((u-7)/9)
+            wave3=48+4*math.sin((u-12)/8)
+            if v>=wave3:rgb=(40,77,62)
+            elif v>=wave2:rgb=(93,134,108)
+            elif v>=wave1:rgb=(140,171,150)
+            else:rgb=(201,217,198)
+            rgba=(*rgb,alpha)
             pixels.extend(rgba)
     raw=zlib.compress(bytes(pixels),9)
     return (b"\x89PNG\r\n\x1a\n"+png_chunk(b"IHDR",struct.pack(">2I5B",size,size,8,6,0,0,0))
