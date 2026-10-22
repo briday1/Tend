@@ -46,7 +46,8 @@ def list_threads(q=""):
     for t in rows:
         t["attention_due"]=bool(t["revisit_at"] and t["revisit_at"]<=now() and t["state"]!="settled")
         t["deadline_due"]=bool(t.get("due_at") and t["due_at"][:10]<=now()[:10] and t["state"]!="settled")
-        t["due"]=t["attention_due"]
+        t["recurring_due"]=bool(t.get("recurrence") and t.get("next_occurrence") and t["next_occurrence"]<=now() and t["state"]!="settled")
+        t["due"]=t["attention_due"] or t["recurring_due"]
     for t in rows:t["action_config"]=json.loads(t["action_config"] or "{}")
     return sorted(rows,key=lambda t:not t["due"])
 def create(title,summary=""):
@@ -96,7 +97,7 @@ def delete(id):
     with conn() as c:return bool(c.execute("DELETE FROM threads WHERE id=?",(id,)).rowcount)
 def overview():
     rows=list_threads()
-    return {"deadlines":[t for t in rows if t["deadline_due"]],"due":[t for t in rows if t["attention_due"]],"active":[t for t in rows if t["state"]=="open" and not t["due"]],"waiting":[t for t in rows if t["state"]=="waiting"],"paused":[t for t in rows if t["state"]=="paused"],"settled":[t for t in rows if t["state"]=="settled"]}
+    return {"deadlines":[t for t in rows if t["deadline_due"]],"due":[t for t in rows if t["due"]],"active":[t for t in rows if t["state"]=="open" and not t["due"]],"waiting":[t for t in rows if t["state"]=="waiting"],"paused":[t for t in rows if t["state"]=="paused"],"settled":[t for t in rows if t["state"]=="settled"]}
 
 def conversation(limit=100):
     return list(reversed(query("SELECT * FROM conversation ORDER BY created_at DESC,id DESC LIMIT ?",(limit,))))
