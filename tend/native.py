@@ -37,7 +37,7 @@ def main():
     tray=None
     exiting=False
     try:
-        root=Path(sys.executable).resolve().parent.parent.parent if getattr(sys,"frozen",False) else Path(__file__).resolve().parent.parent
+        root=Path(sys.executable).resolve().parent.parent if getattr(sys,"frozen",False) else Path(__file__).resolve().parent.parent
         py=root/".venv"/"Scripts"/"python.exe"
         if not py.is_file():
             raise RuntimeError("Tend Python environment not found: "+str(py)+". Re-run install-desktop.ps1.")
@@ -48,7 +48,7 @@ def main():
         def on_close():
             if not exiting:
                 window.hide()
-                return False
+                return True
         window.events.closing+=on_close
 
         def reopen(icon,item):
@@ -70,12 +70,13 @@ def main():
                     _,alive=psutil.wait_procs(children,timeout=3)
                     for child in alive:child.kill()
                 except psutil.Error as exc:desktop.log("Native service shutdown: "+repr(exc))
-            window.destroy()
+            try:window.destroy()
+            except Exception:pass
         tray=pystray.Icon("Tend",Image.open(io.BytesIO(raster(256))).convert("RGBA"),"Tend",
              pystray.Menu(pystray.MenuItem("Open Tend",reopen,default=True),
                            pystray.MenuItem("Exit Tend",exit_app)))
         tray.run_detached()
-        webview.start(gui="edgechromium")
+        webview.start(gui="edgechromium",debug=False)
     finally:
         if tray:
             try:tray.stop()
