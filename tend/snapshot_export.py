@@ -27,10 +27,19 @@ def png(start,end,category="",theme="sage",scale=2):
     if theme not in THEMES:raise ValueError("Unknown theme")
     if scale not in (1,2,4):raise ValueError("Scale must be 1, 2, or 4")
     data=snapshot(start,end,category)
-    days=data["days"];cols=1 if len(days)==1 else 7
-    rows=(len(days)+cols-1)//cols
-    w=1190;cellh=185 if cols==7 else 280
-    h=285+rows*cellh+100
+    all_days=data["days"]
+    weekend_content=any(date.fromisoformat(day["date"]).weekday() >= 5
+                        and (day["tasks"] or day["activity"]) for day in all_days)
+    cols=1 if len(all_days)==1 else (7 if weekend_content else 5)
+    days=[day for day in all_days if cols in (1,7) or date.fromisoformat(day["date"]).weekday()<5]
+    # Empty weekday cells always remain visible. Weekend columns appear only for scheduled/recorded content.
+    start_offset=date.fromisoformat(all_days[0]["date"]).weekday() if all_days and cols>1 else 0
+    end_offset=date.fromisoformat(all_days[-1]["date"]).weekday() if all_days and cols>1 else 0
+    visible_count=start_offset+len(days) if cols>1 else len(days)
+    rows=max(1,(visible_count+cols-1)//cols)
+    w=1190;cellh=170 if cols>1 else 240
+    top=122;header_h=37 if cols>1 else 0
+    h=top+header_h+rows*cellh+24
     bg,ink,surface=THEMES[theme]
     im=Image.new("RGB",(w*scale,h*scale),bg)
     d=ImageDraw.Draw(im)
@@ -44,44 +53,31 @@ def png(start,end,category="",theme="sage",scale=2):
         if d.textlength(s,font=font)<=width*scale:return s
         while s and d.textlength(s+"…",font=font)>width*scale:s=s[:-1]
         return s+"…" if s else ""
-    categories=sorted(data["insights"]["categories"],key=str.casefold)
+    categories=sorted({t.get("category") or "Uncategorized" for day in days for t in day["tasks"]},key=str.casefold)
     cmap={c:COLORS[i%len(COLORS)] for i,c in enumerate(categories)}
-    txt(40,28,"TEND  /  SNAPSHOTS",17,bold=True)
-    txt(40,70,start if start==end else f"{start}  —  {end}",35,bold=True)
-    counts=data["insights"]
-    for i,(name,num) in enumerate((("TASKS DUE",counts["scheduled_due"]),
-                                    ("ACTIVITY LOGGED",counts["activity_events"]),
-                                    ("ACTIVE DAYS",counts["active_days"]))):
-        x=40+i*370
-        rect((x,137,x+350,218),surface,14)
-        txt(x+18,148,num,29,bold=True)
-        txt(x+18,192,name,13)
-    top=252;cw=1110/cols
+    txt(40,31,start if start==end else f"{start}  —  {end}",27,bold=True)
+    cw=1110/cols
+    if cols>1:
+        for i,label in enumerate(["Mon","Tue","Wed","Thu","Fri","Sat","Sun"][:cols]):
+            txt(48+i*cw,top,label,13,bold=True)
+    grid_top=top+header_h
+    for i in range(rows*cols):
+        x=40+(i%cols)*cw;y=grid_top+(i//cols)*cellh
+        rect((x,y,x+cw-2,y+cellh-2),surface,0)
     for i,day in enumerate(days):
-        x=40+(i%cols)*cw;y=top+(i//cols)*cellh
-        rect((x,y,x+cw-6,y+cellh-7),surface,12)
+        slot=i+start_offset if cols>1 else i
+        x=40+(slot%cols)*cw;y=grid_top+(slot//cols)*cellh
         dt=date.fromisoformat(day["date"])
-        txt(x+12,y+10,dt.strftime("%a %d %b"),14,bold=True)
-        shown=3 if cols==7 else 7
+        txt(x+9,y+8,dt.strftime("%a %d %b") if cols==1 else str(dt.day),13,bold=True)
+        shown=max(1,(cellh-48)//31)
         for j,item in enumerate(day["tasks"][:shown]):
-            ty=y+43+j*36
-            color=cmap.get(item["category"],COLORS[0])
-            rect((x+10,ty,x+cw-16,ty+31),color,6)
+            ty=y+35+j*31
+            color=cmap.get(item.get("category") or "Uncategorized",COLORS[0])
+            rect((x+6,ty,x+cw-8,ty+27),color,4)
             font=_font(12*scale,True)
-            label=clip(item["title"],cw-44,font)
-            txt(x+16,ty+7,label,12,"#24312c",True)
+            label=clip(item["title"],cw-28,font)
+            txt(x+12,ty+5,label,12,"#24312c",True)
         extra=len(day["tasks"])-shown
-        if extra>0:txt(x+12,y+cellh-29,f"+{extra} more tasks",12)
-        if day["activity"]:
-            txt(x+12,y+cellh-48,f"{len(day['activity'])} activity",11)
-    ly=top+rows*cellh+10
-    lx=40
-    for cat in categories:
-        if lx>1050:break
-        rect((lx,ly+4,lx+10,ly+14),cmap[cat],5)
-        name=cat if len(cat)<19 else cat[:18]+"…"
-        txt(lx+17,ly,name,13)
-        lx+=max(115,min(205,len(name)*9+26))
-    txt(40,h-39,"Recorded activity is historical; due dates and task states reflect current records.",12)
+        if extra>0:txt(x+9,y+cellh-22,f"+{extra} more",11)
     out=BytesIO();im.save(out,format="PNG",optimize=True)
     return out.getvalue()
