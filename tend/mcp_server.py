@@ -37,12 +37,13 @@ def add_to_thread(thread_id:str,text:str,kind:str="thought")->dict:
     """Add an observation, question, action, decision, or update."""
     return db.add(thread_id,kind,text) or {"error":"Thread not found"}
 @mcp.tool()
-def revise_thread(thread_id:str,state:str="",summary:str="",revisit_at:str="")->dict:
+def revise_thread(thread_id:str,state:str="",summary:str="",revisit_at:str="",due_at:str="")->dict:
     """Update status, summary, or ISO timestamp for next revisit."""
     fields={}
     if state:fields["state"]=state
     if summary:fields["summary"]=summary
     if revisit_at:fields["revisit_at"]=revisit_at
+    if due_at:fields["due_at"]=due_at
     return db.update(thread_id,fields) or {"error":"Thread not found"}
 @mcp.tool()
 def relate_threads(first_id:str,second_id:str)->dict:
@@ -52,6 +53,14 @@ def relate_threads(first_id:str,second_id:str)->dict:
 def change_category(thread_id:str,category:str)->dict:
     """Move a tracked thought to a named category."""
     return db.update(thread_id,{"category":category}) or {"error":"Thread not found"}
+@mcp.tool()
+def log_activity(thread_id:str,text:str,kind:str="progress",occurred_at:str="")->dict:
+    """Log work or feedback with optional ISO 8601 occurrence timestamp."""
+    return db.record_activity(thread_id,text,kind,occurred_at or None) or {"error":"Thread not found"}
+@mcp.tool()
+def summarize_activity(period:str="week",anchor:str="")->dict:
+    """Return structured activity for a week, month, quarter or year."""
+    return db.activity_report(period,anchor or None)
 if __name__=="__main__":
     db.init()
     mcp.run(transport="streamable-http" if "--http" in sys.argv else "stdio")
