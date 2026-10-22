@@ -170,8 +170,6 @@ def chat(message, progress=None):
     transcript.append({"role":"user","content":message})
     used=[]
     seen={}
-    total_calls=0
-    round_number=0
     labels={
         "list_threads":"Searching tracked tasks","overview":"Reviewing current tasks",
         "get_thread":"Reading task details","activity_report":"Gathering recorded activity",
@@ -191,7 +189,6 @@ def chat(message, progress=None):
         if not calls:
             status("Response ready")
             return {"answer":msg.get("content") or "I couldn't form a response.","actions":used}
-        round_number+=1
         transcript.append({"role":"assistant","content":msg.get("content"),"tool_calls":calls})
         redundant=True
         for call in calls:
@@ -214,11 +211,10 @@ def chat(message, progress=None):
                     result={"error":str(exc)}
                 status(labels.get(name,"Tool operation")+(" — done" if not isinstance(result,dict) or "error" not in result else " — failed"))
                 used.append(name)
-            total_calls+=1
             transcript.append({"role":"tool","tool_call_id":call.get("id",""),"content":json.dumps(result,default=str)})
-        # Safeguard runaway models by requiring a final text response.
-        # This is not a four-/twelve-round hard task limit.
-        if redundant or total_calls>=40:
+        # Only interrupt a cycle consisting entirely of repeated calls.
+        # There is no local numeric action limit.
+        if redundant:
             status("Preparing response from completed operations")
             transcript.append({"role":"system","content":"Do not call any more tools. Summarize exactly what was confirmed by preceding tool results; distinguish failures from successes."})
             final=request(transcript,tools=False,progress=status)
