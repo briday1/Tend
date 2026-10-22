@@ -77,6 +77,11 @@ def change(id:str,data:Change):
     for field in ("revisit_at","due_at","next_occurrence"):
         if fields.get(field):fields[field]=fields[field].isoformat()
     return found(db.update(id,fields))
+@app.get("/api/threads/{id}/due-action")
+def thread_due_action(id:str):
+    """Preview the configured task action; never invokes paid AI."""
+    return db.report_for_task(id)
+
 @app.delete("/api/threads/{id}")
 def delete(id:str):return {"deleted":db.delete(id)}
 @app.post("/api/threads/{id}/entries",status_code=201)
