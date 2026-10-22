@@ -11,6 +11,12 @@ from . import storage
 from pathlib import Path
 
 def main():
+    # Detect an older Tend supervisor before opening a new browser tab.
+    import socket
+    with socket.socket() as probe:
+        probe.settimeout(.5)
+        if probe.connect_ex(("127.0.0.1",int(os.environ.get("TEND_WEB_PORT","8765"))))==0:
+            raise SystemExit("Tend port is already in use. Close the previous Tend server before starting a new one. Older servers may not support /api/chat/stream.")
     store.init()
     storage.activate_pending()
     store.init()
