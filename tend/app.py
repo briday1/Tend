@@ -8,6 +8,7 @@ from pydantic import BaseModel,Field
 from typing import Literal
 from . import store as db
 from . import ai
+from . import commands
 from .rendering import render
 from .ai import reflect
 
@@ -97,11 +98,11 @@ def history():return db.conversation()
 def chat(data:Message):
     message=data.text.strip()
     if not message:raise HTTPException(422,"Message required")
-    try:result=ai.chat(message)
+    try:result=commands.execute(message) if message.startswith("/") else ai.chat(message)
     except ValueError as exc:raise HTTPException(502,str(exc)) from exc
     db.remember("user",message)
     db.remember("assistant",result["answer"])
-    return {"answer":result["answer"],"answer_html":render(result["answer"]),"actions":result["actions"],"history":db.conversation()}
+    return {"answer":result["answer"],"answer_html":render(result["answer"]),"actions":result.get("actions",[]),"history":db.conversation()}
 
 @app.get("/api/backup")
 def backup():
@@ -123,3 +124,8 @@ def backup():
 @app.get("/api/conversation/rendered")
 def rendered_history():
     return [{"id":row["id"],"role":row["role"],"body":row["body"],"html":render(row["body"]) if row["role"]=="assistant" else None,"created_at":row["created_at"]} for row in db.conversation()]
+
+@app.get("/api/commands")
+def command_reference():return commands.COMMANDS
+@app.get("/api/brief")
+def brief():return {"text":db.daily_brief(),"html":render(db.daily_brief())}
