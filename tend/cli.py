@@ -10,6 +10,9 @@ from . import store
 
 def main():
     store.init()
+    from .storage import activate_pending
+    activate_pending()
+    store.init()
     env=os.environ.copy()
     web_host="127.0.0.1"
     web_port=int(env.get("TEND_WEB_PORT","8765"))
