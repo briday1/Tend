@@ -94,9 +94,16 @@ def chat(data:Message):
 @app.get("/api/backup")
 def backup():
     from fastapi.responses import FileResponse
+    from starlette.background import BackgroundTask
     from tempfile import NamedTemporaryFile
     import sqlite3
+    import os
     file=NamedTemporaryFile(prefix="tend-backup-",suffix=".sqlite3",delete=False)
     file.close()
-    with sqlite3.connect(db.path()) as src, sqlite3.connect(file.name) as dest:src.backup(dest)
-    return FileResponse(file.name,filename="tend-backup.sqlite3",media_type="application/octet-stream")
+    try:
+        with sqlite3.connect(db.path()) as src, sqlite3.connect(file.name) as dest:src.backup(dest)
+    except Exception:
+        os.unlink(file.name)
+        raise
+    return FileResponse(file.name,filename="tend-backup.sqlite3",media_type="application/octet-stream",
+                        background=BackgroundTask(os.unlink,file.name))
