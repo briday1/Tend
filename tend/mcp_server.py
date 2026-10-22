@@ -5,6 +5,16 @@ from mcp.server.fastmcp import FastMCP
 from . import store as db
 mcp=FastMCP("Tend",host="127.0.0.1",port=int(os.environ.get("TEND_MCP_PORT","8766")))
 @mcp.tool()
+def get_snapshot(start:str,end:str,category:str="")->dict:
+    """Get a deterministic calendar snapshot for inclusive ISO dates, with category insights and task deep links. Export in the Tend Snapshots UI."""
+    from .snapshots import snapshot
+    return snapshot(start,end,category)
+@mcp.tool()
+def task_link(thread_id:str)->dict:
+    """Return a clickable local Tend task link, suitable for rich text or fallback navigation."""
+    t=db.get(thread_id)
+    return {"id":thread_id,"title":t["title"],"href":"/snapshots#task/"+thread_id} if t else {"error":"Thread not found"}
+@mcp.tool()
 def whats_on_my_mind()->dict:
     """Return open, due, waiting, paused, and settled threads."""
     return db.overview()
