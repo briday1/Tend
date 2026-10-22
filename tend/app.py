@@ -186,3 +186,41 @@ def complete_recurring(id:str,data:Occurrence):
     except ValueError as exc:raise HTTPException(422,str(exc)) from None
 @app.get("/api/recurring")
 def recurring():return {"due":db.recurring_due(),"all":[t for t in db.list_threads() if t.get("recurrence")]}
+
+@app.post("/api/chat/stream")
+def chat_stream(data:Message):
+    """NDJSON status stream; tool names only, never tool arguments or secrets."""
+    import json,queue,threading
+    from fastapi.responses import StreamingResponse
+    message=data.text.strip()
+    if not message:raise HTTPException(422,"Message required")
+    def events():
+        q=queue.Queue()
+        def worker():
+            try:
+                if message.startswith("/"):
+                    result=commands.execute(message)
+                    if result is None:raise ValueError("Unknown command. Type /help.")
+                else:
+                    result=ai.chat(message,progress=lambda value:q.put({"type":"status","message":value}))
+                db.remember("user",message)
+                db.remember("assistant",result["answer"])
+                q.put({"type":"done","answer":result["answer"],"answer_html":render(result["answer"])})
+            except Exception as exc:
+                # Do not send raw provider exceptions or traceback to clients.
+                q.put({"type":"error","message":str(exc) if isinstance(exc,ValueError) else "Assistant request failed. Check Tend server logs."})
+            finally:q.put(None)
+        threading.Thread(target=worker,daemon=True).start()
+        while True:
+            item=q.get()
+            if item is None:break
+            yield json.dumps(item,ensure_ascii=False)+"\\n"
+    return StreamingResponse(events(),media_type="application/x-ndjson",headers={"Cache-Control":"no-store","X-Content-Type-Options":"nosniff"})
+
+@app.post("/api/settings/test")
+def test_ai_connection():
+    try:
+        response=ai.request([{"role":"user","content":"Respond with OK."}],tools=False,max_tokens=12)
+        if not response.get("choices"):raise ValueError("Provider returned no response")
+        return {"ok":True,"message":"Connection successful"}
+    except ValueError as exc:raise HTTPException(502,str(exc)) from None
