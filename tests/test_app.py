@@ -37,3 +37,19 @@ def test_board_category_and_manual_edit(client):
     assert board.status_code==200
     assert any(x["name"]=="Product ideas" and x["threads"][0]["id"]==id for x in board.json())
     assert client.get("/board").status_code==200
+
+def test_markdown_is_sanitized_and_formatted():
+    from tend.rendering import render
+    html = render("**Bold** and *italic*\n\n- one\n- two\n\n<script>alert(1)</script>")
+    assert "<strong>Bold</strong>" in html
+    assert "<em>italic</em>" in html
+    assert "<li>" in html
+    assert "<script>" not in html
+    assert "alert(1)" in html
+
+def test_rendered_history(client):
+    from tend import store
+    store.remember("assistant","A **formatted** response")
+    result = client.get("/api/conversation/rendered")
+    assert result.status_code == 200
+    assert "<strong>formatted</strong>" in result.json()[-1]["html"]
