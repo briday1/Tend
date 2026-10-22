@@ -1,7 +1,9 @@
 """MCP stdio interface to the same local SQLite database as the browser app."""
+import os
+import sys
 from mcp.server.fastmcp import FastMCP
 from . import store as db
-mcp=FastMCP("Tend")
+mcp=FastMCP("Tend",host="127.0.0.1",port=int(os.environ.get("TEND_MCP_PORT","8766")))
 @mcp.tool()
 def whats_on_my_mind()->dict:
     """Return open, due, waiting, paused, and settled threads."""
@@ -36,4 +38,4 @@ def relate_threads(first_id:str,second_id:str)->dict:
     return {"linked":db.link(first_id,second_id)}
 if __name__=="__main__":
     db.init()
-    mcp.run(transport="stdio")
+    mcp.run(transport="streamable-http" if "--http" in sys.argv else "stdio")
