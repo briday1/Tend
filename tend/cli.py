@@ -11,12 +11,24 @@ from . import storage
 from pathlib import Path
 
 def main():
-    # Detect an older Tend supervisor before opening a new browser tab.
-    import socket
+    # Reuse a running compatible Tend instance instead of attempting a duplicate.
+    import socket, json
+    target_port=int(os.environ.get("TEND_WEB_PORT","8765"))
     with socket.socket() as probe:
         probe.settimeout(.5)
-        if probe.connect_ex(("127.0.0.1",int(os.environ.get("TEND_WEB_PORT","8765"))))==0:
-            raise SystemExit("Tend port is already in use. Close the previous Tend server before starting a new one. Older servers may not support /api/chat/stream.")
+        occupied=probe.connect_ex(("127.0.0.1",target_port))==0
+    if occupied:
+        try:
+            with urlopen(f"http://127.0.0.1:{target_port}/api/health",timeout=1.5) as response:
+                health=json.load(response)
+            if health.get("app")=="tend" and health.get("streaming_chat") is True:
+                if os.environ.get("TEND_NO_BROWSER")!="1":
+                    webbrowser.open(f"http://127.0.0.1:{target_port}/")
+                print("Tend is already running; reused existing web server.",flush=True)
+                return
+        except (OSError,ValueError,URLError):
+            pass
+        raise SystemExit("Port "+str(target_port)+" is occupied by an outdated or different server. Stop the previous Tend server to load the new version. See README troubleshooting.")
     store.init()
     storage.activate_pending()
     store.init()
