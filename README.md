@@ -58,6 +58,12 @@ Example things to say: “Remind me to follow up next Thursday,” “What am I 
 
 For ordinary Tend updates, choose **Exit Tend** from the system tray, then run `git pull` inside your Tend folder and relaunch the shortcut. If the **native Windows app or its dependencies** changed, rerun `install-desktop.ps1` to rebuild `Tend.exe`.
 
+## Calendar snapshots and AI skill
+
+Open **Snapshots** in Tend to view real due dates and logged activity over a chosen date range. Click a task to inspect it, or export a deterministic, theme-aware PNG (1×, 2×, 4×) or SVG. Historical task states are not reconstructed from current values.
+
+The repository includes a natural-language [`/snapshot` agent skill](skills/tend-snapshot/SKILL.md) for compatible skill-capable AI clients. Install/register that skill in your AI client separately; adding a file to this repository does **not** automatically register a slash command in every AI application. The Tend MCP server exposes `get_snapshot` and `task_link` tools. Example skill prompts: `/snapshot how did last week go?`, `/snapshot next two weeks for WriteShape`, `/snapshot last month as PNG at 4x`.
+
 ## More information
 
 See [detailed documentation and troubleshooting](docs/DEVELOPMENT.md) for server setup, database backups, MCP configuration, development, and debugging.
