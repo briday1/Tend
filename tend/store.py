@@ -27,6 +27,8 @@ CREATE TABLE IF NOT EXISTS activity(id TEXT PRIMARY KEY,thread_id TEXT NOT NULL 
         if "category" not in columns:c.execute("ALTER TABLE threads ADD COLUMN category TEXT NOT NULL DEFAULT 'Unsorted'")
         if "notified_for" not in columns:c.execute("ALTER TABLE threads ADD COLUMN notified_for TEXT")
         if "due_at" not in columns:c.execute("ALTER TABLE threads ADD COLUMN due_at TEXT")
+        if "recurrence" not in columns:c.execute("ALTER TABLE threads ADD COLUMN recurrence TEXT")
+        if "next_occurrence" not in columns:c.execute("ALTER TABLE threads ADD COLUMN next_occurrence TEXT")
 def query(sql,args=()):
     with conn() as c: return [dict(r) for r in c.execute(sql,args)]
 def get(id):
@@ -49,8 +51,9 @@ def create(title,summary=""):
     with conn() as c:c.execute("INSERT INTO threads(id,title,summary,created_at,updated_at) VALUES(?,?,?,?,?)",(id,title.strip(),summary,t,t))
     return get(id)
 def update(id,fields):
-    allowed={"title","summary","state","revisit_at","due_at","category"}
+    allowed={"title","summary","state","revisit_at","due_at","category","recurrence","next_occurrence"}
     fields={k:v for k,v in fields.items() if k in allowed}
+    if "recurrence" in fields and fields["recurrence"] not in (None,"daily","weekly","monthly","quarterly","yearly"):raise ValueError("Invalid recurrence")
     if "category" in fields and (not isinstance(fields["category"],str) or not fields["category"].strip() or len(fields["category"])>80):raise ValueError("Invalid category")
     if "state" in fields and fields["state"] not in {"open","waiting","paused","settled"}:raise ValueError("Invalid state")
     if "title" in fields and not fields["title"].strip():raise ValueError("Title required")
@@ -160,3 +163,37 @@ def activity_report(period="week",anchor=None):
         end=start.replace(year=start.year+(newmonth-1)//12,month=(newmonth-1)%12+1)
     rows=query("SELECT a.*,t.title,t.category FROM activity a JOIN threads t ON t.id=a.thread_id WHERE occurred_at>=? AND occurred_at<? ORDER BY occurred_at DESC",(start.isoformat(),end.isoformat()))
     return {"period":period,"start":start.isoformat(),"end":end.isoformat(),"events":rows,"count":len(rows)}
+
+def advance_occurrence(value,frequency):
+    from calendar import monthrange
+    from datetime import timedelta
+    dt=datetime.fromisoformat(value.replace("Z","+00:00"))
+    if dt.tzinfo is None:raise ValueError("Recurrence must include timezone")
+    if frequency=="daily":return (dt+timedelta(days=1)).isoformat()
+    if frequency=="weekly":return (dt+timedelta(days=7)).isoformat()
+    months={"monthly":1,"quarterly":3,"yearly":12}
+    if frequency not in months:raise ValueError("Invalid recurrence")
+    offset=months[frequency]
+    year=dt.year+(dt.month-1+offset)//12
+    month=(dt.month-1+offset)%12+1
+    return dt.replace(year=year,month=month,day=min(dt.day,monthrange(year,month)[1])).isoformat()
+
+def recurring_due():
+    return [t for t in list_threads() if t.get("recurrence") and t.get("next_occurrence")
+            and t["next_occurrence"]<=now() and t["state"]!="settled"]
+
+def complete_occurrence(thread_id,description="Completed recurring occurrence"):
+    t=get(thread_id)
+    if not t or not t.get("recurrence") or not t.get("next_occurrence"):
+        raise ValueError("Not a recurring thread")
+    original=t["next_occurrence"]
+    next_date=advance_occurrence(original,t["recurrence"])
+    # Skip missed periods without generating a backlog of duplicate tasks.
+    for _ in range(1200):
+        if next_date>now():break
+        next_date=advance_occurrence(next_date,t["recurrence"])
+    else:raise ValueError("Recurrence interval exceeded safe limit")
+    with conn() as c:
+        c.execute("UPDATE threads SET next_occurrence=?,updated_at=? WHERE id=?",(next_date,now(),thread_id))
+    record_activity(thread_id,description,"milestone")
+    return get(thread_id)
