@@ -15,7 +15,25 @@ function el(tag,cls,text){let node=document.createElement(tag);if(cls)node.class
 async function api(path,method='GET',data){let response=await fetch('/api'+path,{method,headers:{'Content-Type':'application/json'},body:data===undefined?undefined:JSON.stringify(data)});if(!response.ok){let x=await response.json().catch(()=>({}));throw Error(typeof x.detail==='string'?x.detail:'Request failed ('+response.status+')')}return response.json()}
 function scrollChat(){const area=$('#chat');requestAnimationFrame(()=>requestAnimationFrame(()=>{area.scrollTop=area.scrollHeight}))}
 function bubble(role,text,html){let node=el('div','bubble '+(role==='user'?'user':'assistant'),text);if(role==='assistant'&&html)node.innerHTML=html;$('#chat').append(node);scrollChat()}
-async function history(){let rows=await api('/conversation/rendered');$('#chat').replaceChildren();if(!rows.length){let intro=el('div','welcome');intro.append(el('h1','',"What's on your mind?"),el('p','','Put something down, ask what you’re tracking, or pick up where you left off.'));$('#chat').append(intro)}else rows.forEach(x=>bubble(x.role,x.body,x.html));scrollChat()}
+async function history(){
+ const chat=$('#chat');
+ const loading=el('p','hint','Loading conversation…');
+ chat.replaceChildren(loading);
+ const controller=new AbortController();
+ const timer=setTimeout(()=>controller.abort(),10000);
+ try{
+  const response=await fetch('/api/conversation/rendered',{signal:controller.signal});
+  if(!response.ok)throw Error('HTTP '+response.status);
+  const rows=await response.json();
+  if(chat.firstChild!==loading)return;
+  chat.replaceChildren();
+  if(!rows.length){let intro=el('div','welcome');intro.append(el('h1','',"What's on your mind?"),el('p','','Put something down, ask what you’re tracking, or pick up where you left off.'));chat.append(intro)}
+  else rows.forEach(x=>bubble(x.role,x.body,x.html));
+  scrollChat();
+ }catch(err){
+  if(chat.firstChild===loading)loading.textContent=err.name==='AbortError'?'Conversation loading timed out. Check the Tend server or database.':'Could not load conversation: '+err.message;
+ }finally{clearTimeout(timer)}
+}
 async function reminders(force=false){let target=$('#due');let data=await api('/attention'+(force?'?force=true':''));target.replaceChildren();let items=data.items||[];if(!items.length){target.append(el('p','muted','Nothing needs attention right now.'));return}for(let item of items){let node=el('div','item');node.append(el('strong','',item.title),el('small','',item.reason));node.onclick=()=>{show('chat');$('#message').value='Tell me about '+item.title;$('#message').focus()};target.append(node)}}
 function show(next){const open=next==='settings';mode=open?'settings':'chat';$('#settings').classList.toggle('hidden',!open);$('#settingsBackdrop').classList.toggle('hidden',!open);$('#navsettings').classList.toggle('active',open);document.body.classList.toggle('settings-open',open);if(open){loadSettings();loadStorage();$('#closeSettings').focus()}else{$('#navsettings').focus()}}
 $('#settingsBackdrop').onclick=()=>show('chat');
