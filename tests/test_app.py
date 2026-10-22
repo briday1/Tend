@@ -120,3 +120,13 @@ def test_database_folder_move_and_verified_switch(tmp_path,monkeypatch):
     with __import__("sqlite3").connect(newdir/"old.sqlite3") as c:
         assert c.execute("SELECT value FROM sample").fetchone()[0]=="preserved"
     assert old.exists()
+
+def test_desktop_health_and_webapp_manifest(client):
+    response=client.get("/api/health")
+    assert response.status_code==200
+    assert response.json()["app"]=="tend"
+    manifest=client.get("/manifest.webmanifest")
+    assert manifest.status_code==200
+    assert manifest.json()["display"]=="standalone"
+    assert 'rel="manifest"' in client.get("/").text
+    assert 'rel="manifest"' in client.get("/board").text
