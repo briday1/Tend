@@ -64,3 +64,11 @@ Conversation and Board share the same top navigation geometry.
 ## Appearance
 
 Tend uses the same named theme color definitions as WriteShape: Light, Dark, Solarized Light, Solarized Dark, Sepia, Sage, Rose, Dusk, and Ocean (sourced from `fountain-publisher/beta/src/branding/writeShapeThemes.ts`). Board categories use stable colored outlines around each card; there are no category dots, drop shadows, or glow effects.
+
+## Dates, activity history, and database location
+
+Each thought may have an optional **Due date** (an actual deadline) and separately **Bring to attention** (when Tend should nudge you). Only the attention date directly schedules a desktop notification. A due date does not imply one.
+
+The board includes an activity timeline. Log progress, feedback, blockers or decisions with the time they happened (default: now). The AI and MCP tools also support backdated events and period reports for weeks, months, quarters and years. Reports use the recorded occurrence time, not entry time.
+
+In **Settings → Database location**, choose either **Move current database** to a new unused SQLite filename or **Use an existing Tend database**. Both are staged until you stop and restart `tend`. A move uses SQLite backup and integrity verification and keeps the original. Using an existing database validates its schema and integrity without overwriting it. Choose a local disk or a backup-managed folder, **not a cloud-sync folder that modifies the live SQLite file while Tend is running**. The browser cannot provide a reliable native system file path through ordinary web file pickers, so paste a full path (e.g. `D:\\Backups\\Tend\\tend.sqlite3`). External `TEND_DB` environment overrides take precedence and disable Settings relocation.
