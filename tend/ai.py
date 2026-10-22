@@ -157,39 +157,74 @@ def request(messages,tools=True,max_tokens=None,progress=None):
             raise ValueError(detail) from e
 
 def chat(message, progress=None):
+    """Short conversation context, progressive tool use, and repeat-loop protection."""
+    from datetime import datetime
     def status(text):
         if progress:progress(text)
-    from datetime import datetime
     transcript=[{"role":"system","content":SYSTEM+"\nCurrent local date/time: "+datetime.now().astimezone().isoformat()}]
-    for item in store.conversation(28):
-        if item["role"] in ("user","assistant"):transcript.append({"role":item["role"],"content":item["body"]})
+    # Do not send the entire saved conversation. Keep a small recent window,
+    # then retrieve factual long-term context explicitly through tools.
+    for item in store.conversation(10):
+        if item["role"] in ("user","assistant"):
+            transcript.append({"role":item["role"],"content":item["body"][:3000]})
     transcript.append({"role":"user","content":message})
     used=[]
-    max_rounds=12
-    for i in range(max_rounds):
-        status("Connecting to AI provider…" if i==0 else f"Processing tool results… ({i+1}/{max_rounds})")
-        if i==max_rounds-1:
-            transcript.append({"role":"system","content":"Tool budget is nearly exhausted. Finish the task using only necessary calls and provide a clear user-facing summary. Do not promise work that has not been done."})
+    seen={}
+    total_calls=0
+    round_number=0
+    labels={
+        "list_threads":"Searching tracked tasks","overview":"Reviewing current tasks",
+        "get_thread":"Reading task details","activity_report":"Gathering recorded activity",
+        "run_task_due_action":"Preparing the linked report",
+        "capture":"Creating a task","add_note":"Adding notes",
+        "set_category":"Organizing categories","set_revisit":"Scheduling a reminder",
+        "set_recurrence":"Updating the recurrence","set_task_due_action":"Linking an action to a reminder",
+        "log_activity":"Recording an activity","set_status":"Updating task status",
+        "set_due_date":"Setting a deadline","daily_brief":"Preparing your brief"
+    }
+    status("Contacting AI provider")
+    while True:
         answer=request(transcript,progress=status)
         choice=answer.get("choices",[{}])[0]
         msg=choice.get("message",{})
         calls=msg.get("tool_calls") or []
         if not calls:
+            status("Response ready")
             return {"answer":msg.get("content") or "I couldn't form a response.","actions":used}
+        round_number+=1
         transcript.append({"role":"assistant","content":msg.get("content"),"tool_calls":calls})
+        redundant=True
         for call in calls:
             name=call.get("function",{}).get("name","")
-            try:
-                args=json.loads(call["function"].get("arguments") or "{}")
-                result=dispatch(name,args)
-            except (ValueError,KeyError,TypeError) as e:result={"error":str(e)}
-            used.append(name)
-            status("Tool: "+name+" — "+("completed" if not isinstance(result,dict) or "error" not in result else "failed"))
-            transcript.append({"role":"tool","tool_call_id":call["id"],"content":json.dumps(result,default=str)})
-    # Avoid claiming completion; tell the user which operations were attempted.
-    unique=list(dict.fromkeys(used))
-    status("Tool round limit reached.")
-    return {"answer":"I completed some operations but could not finish every step in one request. Tools used: "+(", ".join(unique) if unique else "none")+". Please specify what remains to finish.","actions":used}
+            raw_args=call.get("function",{}).get("arguments") or "{}"
+            signature=(name,raw_args)
+            seen[signature]=seen.get(signature,0)+1
+            if seen[signature]==1:redundant=False
+            if seen[signature]>1:
+                # Never perform the same mutating operation twice just because
+                # the model asked again; duplicates can create duplicate tasks.
+                result={"error":"This identical tool call was already made. Use its previous result and finish."}
+                status(labels.get(name,"Checking task data")+" — repeated call skipped")
+            else:
+                status(labels.get(name,"Working with stored information"))
+                try:
+                    args=json.loads(raw_args)
+                    result=dispatch(name,args)
+                except (ValueError,KeyError,TypeError) as exc:
+                    result={"error":str(exc)}
+                status(labels.get(name,"Tool operation")+(" — done" if not isinstance(result,dict) or "error" not in result else " — failed"))
+                used.append(name)
+            total_calls+=1
+            transcript.append({"role":"tool","tool_call_id":call.get("id",""),"content":json.dumps(result,default=str)})
+        # Safeguard runaway models by requiring a final text response.
+        # This is not a four-/twelve-round hard task limit.
+        if redundant or total_calls>=40:
+            status("Preparing response from completed operations")
+            transcript.append({"role":"system","content":"Do not call any more tools. Summarize exactly what was confirmed by preceding tool results; distinguish failures from successes."})
+            final=request(transcript,tools=False,progress=status)
+            result=final.get("choices",[{}])[0].get("message",{}).get("content")
+            return {"answer":result or "The tool process stopped after repeated calls. Review the completed operations above.","actions":used}
+        status("Checking next steps")
 
 def reflect(question):
     return {"configured":public_config()["has_key"],"answer":chat(question)["answer"]}
