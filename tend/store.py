@@ -91,7 +91,7 @@ def board():
 
 def claim_notifications():
     """Claim due reminders once per scheduled time."""
-    from datetime import datetime,timezone
+    from datetime import datetime,timezone,timedelta
     current=datetime.now(timezone.utc)
     claimed=[]
     with conn() as c:
@@ -100,7 +100,7 @@ def claim_notifications():
             try:due=datetime.fromisoformat(row["revisit_at"].replace("Z","+00:00"))
             except ValueError:continue
             if due.tzinfo is None:continue
-            if due<=current:
+            if current-timedelta(hours=24)<=due<=current and len(claimed)<3:
                 c.execute("UPDATE threads SET notified_for=? WHERE id=?",(row["revisit_at"],row["id"]))
                 claimed.append(dict(row))
     return claimed
