@@ -35,6 +35,10 @@ class Relation(BaseModel):
 def found(x):
     if x is None:raise HTTPException(404,"Not found")
     return x
+@app.get("/theme.css")
+def theme_css():return FileResponse(Path(__file__).with_name("theme.css"),media_type="text/css")
+@app.get("/theme.js")
+def theme_js():return FileResponse(Path(__file__).with_name("theme.js"),media_type="application/javascript")
 @app.get("/")
 def home():return FileResponse(Path(__file__).with_name("index.html"))
 @app.get("/board")
