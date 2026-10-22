@@ -39,3 +39,24 @@ Current limits: reminders are surfaced when browsing (no OS push notifications);
 The API key input uses a password field, autocomplete disabled, and is cleared after saving. The GET settings endpoint returns only `has_key`, model, and URL. Saved credentials stay in the operating system vault. No credential ever belongs in the SQLite database, a browser cache, or the Git repository. Avoid running Tend behind a public reverse proxy, or using an untrusted model provider. A previously saved key from versions before the vault migration may exist in filesystem backups, disk history, or snapshots; rotate it if exposure is a concern.
 
 The selected color theme is a display preference kept in browser local storage, separate from SQLite content; clearing browser data resets only the theme, not thoughts or conversations.
+
+## Daily brief and commands
+
+The Conversation view includes a **/ Commands** reference button (or type `/` in an empty message). Commands work locally without an AI request:
+
+- `/brief` — due, active and waiting overview
+- `/due` — reminders ready to revisit
+- `/waiting` — blocked or waiting items
+- `/recent` — recently changed topics
+- `/board` — board navigation hint
+- `/help` — command reference
+
+Ask the assistant for a daily brief conversationally to get an AI-interpreted answer from the same stored information.
+
+## Desktop notifications and Attention
+
+Running `tend` now starts three local components: the browser web server, MCP HTTP server, and desktop notification worker. The worker polls for due reminders every 20 seconds and attempts OS desktop notifications. Notifications require an active desktop session and OS notification support; they do not run while Tend is stopped or the computer is off. Due reminders are marked as delivered at most once per schedule, including across restarts. Operating-system permissions and platform support may affect whether a popup is actually shown.
+
+The right-side **Attention** panel is selected by the configured AI model rather than displaying every open thread. It shows at most five items, can show none, and caches choices for ten minutes or until recorded threads change. The refresh control asks the AI to reconsider. With no AI connection or a failed AI response, the panel falls back to explicit due reminders only.
+
+Conversation and Board share the same top navigation geometry.
