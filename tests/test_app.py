@@ -87,3 +87,16 @@ def test_attention_empty_and_commands_without_api_key(client,monkeypatch):
     monkeypatch.setattr(ai,"public_config",lambda:{"has_key":False})
     assert client.get("/api/attention?force=true").json()["items"]==[]
     assert client.get("/api/brief").status_code==200
+
+def test_due_date_separate_from_attention(client):
+    t=client.post("/api/threads",json={"title":"Deadline test"}).json()
+    data=client.patch(f"/api/threads/{t['id']}",json={"due_at":"2026-12-15T12:00:00Z","revisit_at":"2026-11-15T09:00:00Z"}).json()
+    assert data["due_at"].startswith("2026-12-15")
+    assert data["revisit_at"].startswith("2026-11-15")
+
+def test_activity_reporting_backdated(client):
+    t=client.post("/api/threads",json={"title":"Activity test"}).json()
+    result=client.post(f"/api/threads/{t['id']}/activity",json={"body":"Worked on a draft","kind":"progress","occurred_at":"2026-07-08T10:00:00Z"})
+    assert result.status_code==201
+    report=client.get("/api/activity/report?period=quarter&anchor=2026-07-10T12:00:00Z").json()
+    assert any(event["body"]=="Worked on a draft" for event in report["events"])
