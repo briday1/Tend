@@ -156,3 +156,27 @@ def test_stream_reports_status_and_completion(client,monkeypatch):
     assert events[1]["message"]=="Tool: overview — completed"
     assert events[-1]["type"]=="done"
     assert "<strong>two</strong>" in events[-1]["answer_html"]
+
+def test_linked_weekly_activity_report(client):
+    from tend import store
+    report_task=store.create("Weekly activity report")
+    store.update(report_task["id"],{"category":"Branch Activity"})
+    work=store.create("Branch planning")
+    store.update(work["id"],{"category":"Branch Activity"})
+    other=store.create("Unrelated project")
+    store.update(other["id"],{"category":"Other"})
+    store.record_activity(work["id"],"Finished branch planning","progress","2026-10-20T15:00:00+00:00")
+    store.record_activity(other["id"],"Unrelated meeting","progress","2026-10-20T16:00:00+00:00")
+    result=store.configure_due_action(report_task["id"],"activity_report","week","Branch Activity")
+    assert result["due_action"]=="activity_report"
+    preview=store.report_for_task(report_task["id"],"2026-10-23T13:00:00+00:00")
+    assert preview["count"]==1
+    assert preview["events"][0]["body"]=="Finished branch planning"
+    assert preview["category"]=="Branch Activity"
+    assert store.get(report_task["id"])["action_config"]["period"]=="week"
+
+def test_recurring_due_is_in_overview(client):
+    from tend import store
+    t=store.create("Weekly activity report")
+    store.update(t["id"],{"recurrence":"weekly","next_occurrence":"2020-01-01T00:00:00+00:00"})
+    assert any(item["id"]==t["id"] for item in store.overview()["due"])
