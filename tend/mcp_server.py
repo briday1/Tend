@@ -61,6 +61,18 @@ def log_activity(thread_id:str,text:str,kind:str="progress",occurred_at:str="")-
 def summarize_activity(period:str="week",anchor:str="")->dict:
     """Return structured activity for a week, month, quarter or year."""
     return db.activity_report(period,anchor or None)
+@mcp.tool()
+def recurring_items()->dict:
+    """See all recurring threads and their next occurrences."""
+    return {"due":db.recurring_due(),"all":[t for t in db.list_threads() if t.get("recurrence")]}
+@mcp.tool()
+def set_recurrence(thread_id:str,frequency:str,next_occurrence:str)->dict:
+    """Configure a daily, weekly, monthly, quarterly or yearly recurrence."""
+    return db.update(thread_id,{"recurrence":frequency,"next_occurrence":next_occurrence}) or {"error":"Thread not found"}
+@mcp.tool()
+def complete_recurring_occurrence(thread_id:str,description:str="Completed recurring occurrence")->dict:
+    """Log completing a cycle and schedule the next recurrence."""
+    return db.complete_occurrence(thread_id,description)
 if __name__=="__main__":
     db.init()
     mcp.run(transport="streamable-http" if "--http" in sys.argv else "stdio")
