@@ -187,3 +187,18 @@ The installation includes the `pystray`, `Pillow`, and `psutil` dependencies nee
 ### Horizon icon refresh (desktop, tray, and browser)
 
 Tend's header, browser favicon, app manifest, and system tray now use Horizon icon artwork from the same PNG renderer as the Windows shortcut's ICO. The installer writes `tend-horizon.ico` (a new filename to avoid stale Windows shortcut icon caches). Run `git pull`, then `powershell -ExecutionPolicy Bypass -File .\\install-desktop.ps1` to refresh the shortcut. **Fully exit the existing Tend tray instance before reopening**: an already-running tray process keeps its old icon and code. Hard-refresh the browser app if it shows an old favicon. Chromium's `--app` window may still display the Edge/Chrome taskbar identity instead of the page favicon, depending on the browser and Windows; the favicon cannot fully control native browser chrome.
+
+## Native Windows Tend app (not an Edge window)
+
+The recommended Windows installer now builds a proper **`dist\\Tend.exe`** using PyInstaller and a small native WebView2 window, then creates/updates the **Tend** desktop shortcut to point to that executable. Unlike `msedge.exe --app`, the Windows taskbar sees the native `Tend.exe` and can pin it independently of Edge. The native executable also sets the Tend app identity and uses the transparent circular Horizon icon for its executable/shortcut; the same image renderer supplies the system tray artwork and browser favicons.
+
+Before installing, **exit any older Tend tray instance and stop the old local Tend server**. Run from PowerShell in the cloned Tend repository:
+
+```powershell
+ git pull
+ powershell -ExecutionPolicy Bypass -File .\\install-desktop.ps1
+```
+
+The installer installs build dependencies into `.venv`, builds the executable locally and updates the desktop shortcut. Pin the resulting **Tend** application (or `dist\\Tend.exe`) to your taskbar, not Microsoft Edge. Future native code changes require rerunning the installer to rebuild the executable; ordinary web/app Python changes take effect on server restart after `git pull`. The `.venv` and repository must remain at their installed paths because `Tend.exe` starts the server from that environment. A Microsoft Edge **WebView2 Runtime** must be available on Windows; that is an embedded web runtime and does not make Tend an Edge taskbar application. Closing the native window hides it to the system tray; **Exit Tend** from the tray stops services started by the native app. An already running external Tend server is reused rather than terminated by the tray.
+
+Note: this is a Windows-local build and has not yet been executed/tested in the user's Windows environment.
