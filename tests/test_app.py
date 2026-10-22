@@ -194,3 +194,19 @@ def test_task_action_editor_persists_prompt_and_schedule(client):
     assert saved["action_config"]=={"period":"week","category":"Branch Activity"}
     assert saved["recurrence"]=="weekly"
     assert saved["due_action"]=="activity_report"
+
+def test_archive_restore_preserves_task(client):
+    from tend import store
+    task=store.create("Old work")
+    ident=task["id"]
+    store.add(ident,"thought","Original notes")
+    archive=client.post("/api/threads/"+ident+"/archive")
+    assert archive.status_code==200
+    assert archive.json()["archived_at"]
+    assert not any(t["id"]==ident for g in client.get("/api/board").json() for t in g["threads"])
+    assert any(t["id"]==ident for t in client.get("/api/archived").json())
+    assert all(t["id"]!=ident for t in client.get("/api/overview").json()["active"])
+    restored=client.post("/api/threads/"+ident+"/restore")
+    assert restored.status_code==200 and restored.json()["archived_at"] is None
+    assert len(restored.json()["entries"])==1
+    assert any(t["id"]==ident for g in client.get("/api/board").json() for t in g["threads"])
