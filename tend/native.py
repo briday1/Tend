@@ -61,15 +61,11 @@ def main():
             exiting=True
             icon.stop()
             if supervisor is not None and supervisor.poll() is None:
-                import psutil
                 try:
-                    parent=psutil.Process(supervisor.pid)
-                    children=parent.children(recursive=True)
-                    parent.terminate()
-                    for child in children:child.terminate()
-                    _,alive=psutil.wait_procs(children,timeout=3)
-                    for child in alive:child.kill()
-                except psutil.Error as exc:desktop.log("Native service shutdown: "+repr(exc))
+                    from tend.shutdown import stop_process_tree
+                    stop_process_tree(supervisor.pid,log=desktop.log)
+                except Exception as exc:
+                    desktop.log("Native service shutdown failed: "+repr(exc))
             try:window.destroy()
             except Exception:pass
         tray=pystray.Icon("Tend",Image.open(io.BytesIO(raster(256))).convert("RGBA"),"Tend",
