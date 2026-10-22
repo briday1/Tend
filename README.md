@@ -168,3 +168,18 @@ If your Tend database lives inside a OneDrive-synchronized folder, avoid concurr
 ### Fix for a desktop shortcut that silently fails to start Tend
 
 Older launcher builds invoked the service supervisor using `pythonw.exe`. The supervisor writes startup information to standard output, which can be missing under `pythonw.exe` on Windows. The desktop launcher now uses **`python.exe` with `CREATE_NO_WINDOW`**, redirecting output to `%USERPROFILE%\.tend\server.log`. The shortcut still uses `pythonw.exe` as its small, windowless launcher. Run `git pull` and reopen the desktop shortcut after closing any outdated Tend instances; this fix does not require reinstalling the shortcut. If it still fails, examine `desktop-launch.log`, `server.log`, and `services.log` in `%USERPROFILE%\.tend`.
+
+## One-click Windows desktop launch and system tray
+
+The `install-desktop.ps1` installer creates **Tend.lnk** on your Windows desktop. Double-click it to start Tend's local web/MCP/reminder services if needed, open Tend in a standalone browser app window, and keep a Tend icon in the Windows notification area (possibly under the taskbar's hidden-icons arrow). You can close the window and reopen it through the tray icon's **Open Tend** action or by clicking the desktop shortcut again. The shortcut is not the Chrome/Edge browser-installed PWA, which cannot start Python services.
+
+The tray menu's **Exit Tend** stops the services launched by that tray instance. If Tend was already running outside the tray when opened, the menu says **Exit Tend tray** and doesn't stop those independently owned services. Startup errors are shown in a Windows dialog and logged at `%USERPROFILE%\\.tend\\desktop-launch.log`.
+
+To install or update the desktop integration after `git pull`, run:
+
+```powershell
+.\\.venv\\Scripts\\python.exe -m pip install -e .
+powershell -ExecutionPolicy Bypass -File .\\install-desktop.ps1
+```
+
+The installation includes the `pystray`, `Pillow`, and `psutil` dependencies needed for the Windows tray. The chat screen now shows **Loading conversation…** while history loads, with an explicit timeout/error message instead of looking stuck on an empty welcome message. The desktop launcher has not been verified on every Windows setup.
