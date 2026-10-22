@@ -14,11 +14,11 @@ $shortcut.Arguments = '-m tend.desktop'
 $shortcut.WorkingDirectory = $repo
 $shortcut.Description = 'Launch Tend, starting its local services if necessary'
 $shortcut.WindowStyle = 7 # Minimized as a fallback; pythonw normally creates no window
-$edgeRoot = [Environment]::GetEnvironmentVariable('ProgramFiles(x86)')
-if ($edgeRoot) {
-    $edge = Join-Path $edgeRoot 'Microsoft\Edge\Application\msedge.exe'
-    if (Test-Path $edge) { $shortcut.IconLocation = "$edge,0" }
-}
+$icon = Join-Path $repo 'tend.ico'
+$python = Join-Path $repo '.venv\Scripts\python.exe'
+& $python -m tend.windows_icon $icon
+if ($LASTEXITCODE -ne 0 -or -not (Test-Path $icon)) { throw 'Unable to generate Tend Windows icon.' }
+$shortcut.IconLocation = "$icon,0"
 $shortcut.Save()
 Write-Host "Created $shortcutPath"
 Write-Host "Use this Tend desktop shortcut (not the browser-installed PWA icon) to start local services automatically."
