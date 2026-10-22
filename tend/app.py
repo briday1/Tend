@@ -71,6 +71,16 @@ def snapshot_api(start:str,end:str,category:str=""):
     try:return snapshot(start,end,category)
     except ValueError as exc:raise HTTPException(422,str(exc)) from None
 
+@app.get("/api/snapshot.png")
+def snapshot_png(start:str,end:str,category:str="",theme:str="sage",scale:int=2):
+    from .snapshot_export import png
+    try:
+        return Response(png(start,end,category,theme,scale),media_type="image/png",
+                        headers={"Content-Disposition":"attachment; filename=tend-snapshot.png",
+                                 "Cache-Control":"no-store"})
+    except ValueError as exc:
+        raise HTTPException(422,str(exc)) from None
+
 @app.get("/board")
 def board_page():return FileResponse(Path(__file__).with_name("board.html"))
 @app.get("/api/board")
