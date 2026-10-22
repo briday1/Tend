@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS activity(id TEXT PRIMARY KEY,thread_id TEXT NOT NULL 
         if "due_action" not in columns:c.execute("ALTER TABLE threads ADD COLUMN due_action TEXT")
         if "action_config" not in columns:c.execute("ALTER TABLE threads ADD COLUMN action_config TEXT")
         if "recurring_notified_for" not in columns:c.execute("ALTER TABLE threads ADD COLUMN recurring_notified_for TEXT")
+        if "action_prompt" not in columns:c.execute("ALTER TABLE threads ADD COLUMN action_prompt TEXT")
 def query(sql,args=()):
     with conn() as c: return [dict(r) for r in c.execute(sql,args)]
 def get(id):
@@ -56,9 +57,10 @@ def create(title,summary=""):
     with conn() as c:c.execute("INSERT INTO threads(id,title,summary,created_at,updated_at) VALUES(?,?,?,?,?)",(id,title.strip(),summary,t,t))
     return get(id)
 def update(id,fields):
-    allowed={"title","summary","state","revisit_at","due_at","category","recurrence","next_occurrence","due_action","action_config"}
+    allowed={"title","summary","state","revisit_at","due_at","category","recurrence","next_occurrence","due_action","action_config","action_prompt"}
     fields={k:v for k,v in fields.items() if k in allowed}
     if "recurrence" in fields and fields["recurrence"] not in (None,"daily","weekly","monthly","quarterly","yearly"):raise ValueError("Invalid recurrence")
+    if "action_prompt" in fields and fields["action_prompt"] is not None and (not isinstance(fields["action_prompt"],str) or len(fields["action_prompt"])>1000):raise ValueError("Action description too long")
     if "due_action" in fields and fields["due_action"] not in (None,"activity_report"):raise ValueError("Invalid due action")
     if "action_config" in fields:
         v=fields["action_config"]
