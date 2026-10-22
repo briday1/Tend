@@ -214,7 +214,7 @@ def chat_stream(data:Message):
         while True:
             item=q.get()
             if item is None:break
-            yield json.dumps(item,ensure_ascii=False)+"\\n"
+            yield json.dumps(item,ensure_ascii=False)+"\n"
     return StreamingResponse(events(),media_type="application/x-ndjson",headers={"Cache-Control":"no-store","X-Content-Type-Options":"nosniff"})
 
 @app.post("/api/settings/test")
