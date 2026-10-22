@@ -96,3 +96,11 @@ This adds a **Tend** shortcut to your Windows Desktop. Double-click it to:
 You can also use your browser's **Install app** option thanks to `manifest.webmanifest`, but a browser-installed web-app icon **cannot start Python servers on its own**. Use the Windows **Tend** shortcut above as the reliable one-click launcher.
 
 Tend runs locally on loopback only. The new shortcut launches a detached local server that persists after you close the window, so desktop reminders can continue while the process is running. End the Tend processes or restart Windows to stop it; an explicit tray stop control is not implemented yet. Startup issues are logged in `~/.tend/server.log` or `~/.tend/desktop-launch.log`.
+
+## Lightweight proactive desktop notifications
+
+Tend still delivers explicitly scheduled **Bring to attention** reminders without contacting an AI model. Separately, while the local notification worker runs, it can ask the configured model whether one additional nudge is genuinely worthwhile.
+
+The proactive check uses local filtering before an API call, examines at most 12 compact thread summaries, and expects **none** by default. Checks only occur between 9 AM and 8 PM local time, no more often than once every three hours, with at most four model requests per day. Each reply is capped at 120 output tokens; a thread cannot receive another proactive nudge for seven days. Decisions and budgets are persisted in SQLite, so restarting the application does not reset limits. If no key is configured or the provider errors, proactive notifications are skipped. Explicit reminders are unaffected.
+
+These controls limit **requests and output tokens**, not the exact number of billed input tokens. The model may still incur prompt costs, and provider behavior varies. Desktop notifications require the worker to be running and an OS session that supports notifications.
