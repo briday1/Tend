@@ -1,7 +1,6 @@
 """Windows desktop entry point: start Tend only when needed, then open an app window."""
 import json
 import os
-import shutil
 import subprocess
 import sys
 import time
