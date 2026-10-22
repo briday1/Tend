@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS conversation(id TEXT PRIMARY KEY,role TEXT NOT NULL,b
         columns={row[1] for row in c.execute("PRAGMA table_info(threads)")}
         if "category" not in columns:c.execute("ALTER TABLE threads ADD COLUMN category TEXT NOT NULL DEFAULT 'Unsorted'")
         if "notified_for" not in columns:c.execute("ALTER TABLE threads ADD COLUMN notified_for TEXT")
+        if "due_at" not in columns:c.execute("ALTER TABLE threads ADD COLUMN due_at TEXT")
 def query(sql,args=()):
     with conn() as c: return [dict(r) for r in c.execute(sql,args)]
 def get(id):
@@ -33,7 +34,9 @@ def get(id):
     return t
 def list_threads(q=""):
     rows=query("SELECT t.*,(SELECT COUNT(*) FROM entries e WHERE e.thread_id=t.id) entry_count FROM threads t WHERE title LIKE ? OR summary LIKE ? OR EXISTS(SELECT 1 FROM entries e WHERE e.thread_id=t.id AND e.body LIKE ?) ORDER BY updated_at DESC",("%"+q+"%",)*3)
-    for t in rows:t["due"]=bool(t["revisit_at"] and t["revisit_at"]<=now() and t["state"]!="settled")
+    for t in rows:t["attention_due"]=bool(t["revisit_at"] and t["revisit_at"]<=now() and t["state"]!="settled")
+        t["deadline_due"]=bool(t.get("due_at") and t["due_at"][:10]<=now()[:10] and t["state"]!="settled")
+        t["due"]=t["attention_due"]
     return sorted(rows,key=lambda t:not t["due"])
 def create(title,summary=""):
     if not title.strip():raise ValueError("Title required")
@@ -41,7 +44,7 @@ def create(title,summary=""):
     with conn() as c:c.execute("INSERT INTO threads(id,title,summary,created_at,updated_at) VALUES(?,?,?,?,?)",(id,title.strip(),summary,t,t))
     return get(id)
 def update(id,fields):
-    allowed={"title","summary","state","revisit_at","category"}
+    allowed={"title","summary","state","revisit_at","due_at","category"}
     fields={k:v for k,v in fields.items() if k in allowed}
     if "category" in fields and (not isinstance(fields["category"],str) or not fields["category"].strip() or len(fields["category"])>80):raise ValueError("Invalid category")
     if "state" in fields and fields["state"] not in {"open","waiting","paused","settled"}:raise ValueError("Invalid state")
@@ -73,7 +76,7 @@ def delete(id):
     with conn() as c:return bool(c.execute("DELETE FROM threads WHERE id=?",(id,)).rowcount)
 def overview():
     rows=list_threads()
-    return {"due":[t for t in rows if t["due"]],"active":[t for t in rows if t["state"]=="open" and not t["due"]],"waiting":[t for t in rows if t["state"]=="waiting"],"paused":[t for t in rows if t["state"]=="paused"],"settled":[t for t in rows if t["state"]=="settled"]}
+    return {"deadlines":[t for t in rows if t["deadline_due"]],"due":[t for t in rows if t["attention_due"]],"active":[t for t in rows if t["state"]=="open" and not t["due"]],"waiting":[t for t in rows if t["state"]=="waiting"],"paused":[t for t in rows if t["state"]=="paused"],"settled":[t for t in rows if t["state"]=="settled"]}
 
 def conversation(limit=100):
     return list(reversed(query("SELECT * FROM conversation ORDER BY created_at DESC,id DESC LIMIT ?",(limit,))))
@@ -107,7 +110,10 @@ def claim_notifications():
 
 def daily_brief():
     data=overview()
-    lines=["# Daily brief","","## Ready to revisit"]
+    lines=["# Daily brief","","## Due dates"]
+    lines.extend("- **"+t["title"]+"** (due "+t["due_at"][:10]+")" for t in data["deadlines"][:15])
+    if not data["deadlines"]:lines.append("No upcoming or overdue deadlines in the current due list.")
+    lines+=["","## Bring to attention"]
     lines.extend("- **"+t["title"]+"**" for t in data["due"][:15])
     if not data["due"]:lines.append("Nothing due right now.")
     lines+=["","## In progress"]
