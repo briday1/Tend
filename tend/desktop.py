@@ -110,7 +110,7 @@ def run_tray(server):
     import pystray
     from PIL import Image
     from .windows_icon import raster
-    tray_icon=Image.open(io.BytesIO(raster(64))).convert("RGBA")
+    tray_icon=Image.open(io.BytesIO(raster(256))).convert("RGBA")
     def reopen(icon,item):
         if not healthy():
             show_error("Tend's web server is unavailable. Exit Tend and start it again from the desktop shortcut.")
