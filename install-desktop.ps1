@@ -13,7 +13,7 @@ $shortcut.TargetPath = $pythonw
 $shortcut.Arguments = '-m tend.desktop'
 $shortcut.WorkingDirectory = $repo
 $shortcut.Description = 'Launch Tend, starting its local services if necessary'
-$shortcut.WindowStyle = 7 # Minimized as a fallback; pythonw normally creates no window
+$shortcut.WindowStyle = 1 # Normal app launch; pythonw has no console window
 $icon = Join-Path $repo 'tend.ico'
 $python = Join-Path $repo '.venv\Scripts\python.exe'
 & $python -m tend.windows_icon $icon
@@ -21,4 +21,4 @@ if ($LASTEXITCODE -ne 0 -or -not (Test-Path $icon)) { throw 'Unable to generate 
 $shortcut.IconLocation = "$icon,0"
 $shortcut.Save()
 Write-Host "Created $shortcutPath"
-Write-Host "Use this Tend desktop shortcut (not the browser-installed PWA icon) to start local services automatically."
+Write-Host "Double-click Tend to start the local services, open the app window, and keep Tend in the system tray."
