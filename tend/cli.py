@@ -8,6 +8,7 @@ from urllib.request import urlopen
 from urllib.error import URLError
 from . import store
 from . import storage
+from pathlib import Path
 
 def main():
     store.init()
@@ -24,9 +25,16 @@ def main():
         [sys.executable,"-m","tend.notifications"]
     ]
     children=[]
+    # On Windows, child python.exe processes otherwise create their own console.
+    flags=getattr(subprocess,"CREATE_NO_WINDOW",0) if os.name=="nt" else 0
+    log_path=Path.home()/".tend"/"services.log"
+    log_path.parent.mkdir(parents=True,exist_ok=True)
     try:
         for command in commands:
-            children.append(subprocess.Popen(command,env=env))
+            with log_path.open("ab") as output:
+                children.append(subprocess.Popen(command,env=env,creationflags=flags,
+                    stdin=subprocess.DEVNULL,stdout=output,stderr=subprocess.STDOUT,
+                    close_fds=True))
         url=f"http://{web_host}:{web_port}"
         print(f"Tend browser: {url}",flush=True)
         print(f"Tend MCP: http://127.0.0.1:{mcp_port}/mcp",flush=True)
@@ -68,7 +76,10 @@ def main():
                     c=storage.load();c.pop("pending",None);c.pop("pending_mode",None);storage._write(c)
                 store.init()
                 for command in commands:
-                    children.append(subprocess.Popen(command,env=env))
+                    with log_path.open("ab") as output:
+                        children.append(subprocess.Popen(command,env=env,creationflags=flags,
+                            stdin=subprocess.DEVNULL,stdout=output,stderr=subprocess.STDOUT,
+                            close_fds=True))
                 deadline=time.monotonic()+20
                 while time.monotonic()<deadline:
                     if any(child.poll() is not None for child in children):
