@@ -53,3 +53,11 @@ def test_rendered_history(client):
     result = client.get("/api/conversation/rendered")
     assert result.status_code == 200
     assert "<strong>formatted</strong>" in result.json()[-1]["html"]
+
+def test_theme_assets(client):
+    css=client.get("/theme.css")
+    js=client.get("/theme.js")
+    assert css.status_code==200 and "--accent" in css.text
+    assert js.status_code==200 and "data-theme-picker" in js.text
+    assert 'href="/theme.css"' in client.get("/").text
+    assert 'href="/theme.css"' in client.get("/board").text
