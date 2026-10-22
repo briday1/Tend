@@ -17,7 +17,8 @@ def main():
     if web_port==mcp_port: raise SystemExit("Web and MCP ports must differ")
     commands=[
         [sys.executable,"-m","uvicorn","tend.app:app","--host",web_host,"--port",str(web_port)],
-        [sys.executable,"-m","tend.mcp_server","--http"]
+        [sys.executable,"-m","tend.mcp_server","--http"],
+        [sys.executable,"-m","tend.notifications"]
     ]
     children=[]
     try:
