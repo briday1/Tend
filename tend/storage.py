@@ -14,7 +14,7 @@ def active_path():
 
 def info():
     c=load()
-    return {"current":str(active_path()),"pending":c.get("pending"),"environment_override":bool(os.environ.get("TEND_DB"))}
+    return {"current":str(active_path()),"pending":c.get("pending"),"pending_mode":c.get("pending_mode","move"),"environment_override":bool(os.environ.get("TEND_DB"))}
 
 def _write(config):
     f=config_path();f.parent.mkdir(parents=True,exist_ok=True)
@@ -26,15 +26,17 @@ def _write(config):
     finally:
         if os.path.exists(temp):os.unlink(temp)
 
-def stage(target):
+def stage(target,mode="move"):
+    if mode not in ("move","existing"):raise ValueError("Choose Move current or Use existing")
     if os.environ.get("TEND_DB"):raise ValueError("Remove TEND_DB environment override before relocating the database")
     path=Path(target).expanduser().resolve()
     if path.suffix.lower() not in (".sqlite3",".sqlite",".db"):raise ValueError("Use a .sqlite3, .sqlite, or .db filename")
     if path==active_path():raise ValueError("Choose a different destination")
-    if path.exists():raise ValueError("Destination exists; choose an unused file to avoid overwriting data")
+    if mode=="move" and path.exists():raise ValueError("Destination exists; choose an unused file")
+    if mode=="existing":validate_existing(path)
     if not path.parent.is_dir():raise ValueError("Destination folder must already exist")
-    if not os.access(path.parent,os.W_OK):raise ValueError("Destination folder is not writable")
-    config=load();config["pending"]=str(path);_write(config)
+    if mode=="move" and not os.access(path.parent,os.W_OK):raise ValueError("Destination folder is not writable")
+    config=load();config["pending"]=str(path);config["pending_mode"]=mode;_write(config)
     return info()
 
 def activate_pending():
@@ -43,6 +45,12 @@ def activate_pending():
     if not target:return
     destination=Path(target)
     source=active_path()
+    if config.get("pending_mode")=="existing":
+        validate_existing(destination)
+        config["active"]=str(destination)
+        config.pop("pending",None);config.pop("pending_mode",None)
+        _write(config)
+        return
     if destination.exists():raise RuntimeError("Pending database destination already exists; migration cancelled")
     destination.parent.mkdir(parents=True,exist_ok=True)
     try:
@@ -50,8 +58,20 @@ def activate_pending():
             src.backup(dst)
             ok=dst.execute("PRAGMA integrity_check").fetchone()[0]
             if ok!="ok":raise RuntimeError("Database verification failed")
-        config["active"]=str(destination);config.pop("pending",None);_write(config)
+        config["active"]=str(destination);config.pop("pending",None);config.pop("pending_mode",None);_write(config)
     except Exception:
         destination.unlink(missing_ok=True)
         raise
     # Source is retained as a backup, never deleted.
+
+def validate_existing(path):
+    if not path.is_file():raise ValueError("Existing database file not found")
+    try:
+        # Open read-only: never create, initialize or alter a candidate database.
+        with sqlite3.connect(path.as_uri()+"?mode=ro",uri=True) as c:
+            if c.execute("PRAGMA integrity_check").fetchone()[0]!="ok":raise ValueError("Database integrity check failed")
+            tables={row[0] for row in c.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+            if not {"threads","entries","relations","conversation"}.issubset(tables):
+                raise ValueError("File is not a recognized Tend database")
+    except sqlite3.DatabaseError:
+        raise ValueError("File is not a readable Tend SQLite database") from None
