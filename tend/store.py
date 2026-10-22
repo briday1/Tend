@@ -33,6 +33,7 @@ CREATE TABLE IF NOT EXISTS activity(id TEXT PRIMARY KEY,thread_id TEXT NOT NULL 
         if "action_config" not in columns:c.execute("ALTER TABLE threads ADD COLUMN action_config TEXT")
         if "recurring_notified_for" not in columns:c.execute("ALTER TABLE threads ADD COLUMN recurring_notified_for TEXT")
         if "action_prompt" not in columns:c.execute("ALTER TABLE threads ADD COLUMN action_prompt TEXT")
+        if "archived_at" not in columns:c.execute("ALTER TABLE threads ADD COLUMN archived_at TEXT")
 def query(sql,args=()):
     with conn() as c: return [dict(r) for r in c.execute(sql,args)]
 def get(id):
@@ -45,7 +46,7 @@ def get(id):
 def list_threads(q=""):
     rows=query("SELECT t.*,(SELECT COUNT(*) FROM entries e WHERE e.thread_id=t.id) entry_count FROM threads t WHERE title LIKE ? OR summary LIKE ? OR EXISTS(SELECT 1 FROM entries e WHERE e.thread_id=t.id AND e.body LIKE ?) ORDER BY updated_at DESC",("%"+q+"%",)*3)
     for t in rows:
-        t["attention_due"]=bool(t["revisit_at"] and t["revisit_at"]<=now() and t["state"]!="settled")
+        t["attention_due"]=bool(t["revisit_at"] and t["revisit_at"]<=now() and t["state"]!="settled" and not t.get("archived_at"))
         t["deadline_due"]=bool(t.get("due_at") and t["due_at"][:10]<=now()[:10] and t["state"]!="settled")
         t["recurring_due"]=bool(t.get("recurrence") and t.get("next_occurrence") and t["next_occurrence"]<=now() and t["state"]!="settled")
         t["due"]=t["attention_due"] or t["recurring_due"]
@@ -57,8 +58,9 @@ def create(title,summary=""):
     with conn() as c:c.execute("INSERT INTO threads(id,title,summary,created_at,updated_at) VALUES(?,?,?,?,?)",(id,title.strip(),summary,t,t))
     return get(id)
 def update(id,fields):
-    allowed={"title","summary","state","revisit_at","due_at","category","recurrence","next_occurrence","due_action","action_config","action_prompt"}
+    allowed={"archived_at","title","summary","state","revisit_at","due_at","category","recurrence","next_occurrence","due_action","action_config","action_prompt"}
     fields={k:v for k,v in fields.items() if k in allowed}
+    if "archived_at" in fields and fields["archived_at"] not in (None,) and not isinstance(fields["archived_at"],str):raise ValueError("Invalid archive timestamp")
     if "recurrence" in fields and fields["recurrence"] not in (None,"daily","weekly","monthly","quarterly","yearly"):raise ValueError("Invalid recurrence")
     if "action_prompt" in fields and fields["action_prompt"] is not None and (not isinstance(fields["action_prompt"],str) or len(fields["action_prompt"])>1000):raise ValueError("Action description too long")
     if "due_action" in fields and fields["due_action"] not in (None,"activity_report"):raise ValueError("Invalid due action")
@@ -98,7 +100,7 @@ def link(a,b):
 def delete(id):
     with conn() as c:return bool(c.execute("DELETE FROM threads WHERE id=?",(id,)).rowcount)
 def overview():
-    rows=list_threads()
+    rows=[t for t in list_threads() if not t.get("archived_at")]
     return {"deadlines":[t for t in rows if t["deadline_due"]],"due":[t for t in rows if t["due"]],"active":[t for t in rows if t["state"]=="open" and not t["due"]],"waiting":[t for t in rows if t["state"]=="waiting"],"paused":[t for t in rows if t["state"]=="paused"],"settled":[t for t in rows if t["state"]=="settled"]}
 
 def conversation(limit=100):
@@ -111,6 +113,7 @@ def remember(role,body):
 def board():
     groups={}
     for t in list_threads():
+        if t.get("archived_at"):continue
         category=t.get("category") or "Unsorted"
         groups.setdefault(category,[]).append(t)
     return [{"name":name,"threads":items} for name,items in sorted(groups.items(),key=lambda x:(x[0]=="Unsorted",x[0].casefold()))]
@@ -123,7 +126,7 @@ def claim_notifications():
     with conn() as c:
         rows=c.execute("""SELECT id,title,revisit_at,notified_for,recurrence,next_occurrence,
                               recurring_notified_for,due_action
-                          FROM threads WHERE state!='settled'
+                          FROM threads WHERE state!='settled' AND archived_at IS NULL
                           AND (revisit_at IS NOT NULL OR (recurrence IS NOT NULL AND next_occurrence IS NOT NULL))""").fetchall()
         for row in rows:
             item=dict(row)
@@ -233,7 +236,7 @@ def advance_occurrence(value,frequency):
 
 def recurring_due():
     return [t for t in list_threads() if t.get("recurrence") and t.get("next_occurrence")
-            and t["next_occurrence"]<=now() and t["state"]!="settled"]
+            and t["next_occurrence"]<=now() and t["state"]!="settled" and not t.get("archived_at")]
 
 def complete_occurrence(thread_id,description="Completed recurring occurrence"):
     t=get(thread_id)
@@ -250,3 +253,10 @@ def complete_occurrence(thread_id,description="Completed recurring occurrence"):
         c.execute("UPDATE threads SET next_occurrence=?,updated_at=? WHERE id=?",(next_date,now(),thread_id))
     record_activity(thread_id,description,"milestone")
     return get(thread_id)
+
+def archive_thread(thread_id,archive=True):
+    if not get(thread_id):raise ValueError("Thread not found")
+    return update(thread_id,{"archived_at":now() if archive else None})
+
+def archived_threads(q=""):
+    return [t for t in list_threads(q) if t.get("archived_at")]
