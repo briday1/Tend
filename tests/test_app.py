@@ -131,20 +131,11 @@ def test_desktop_health_and_webapp_manifest(client):
     assert 'rel="manifest"' in client.get("/").text
     assert 'rel="manifest"' in client.get("/board").text
 
-def test_proactive_nudges_budget_and_cooldown(client,monkeypatch):
-    from tend import nudges,store,ai
-    import json
-    from datetime import datetime, timezone
-    item=store.create("Write monthly status update", "Share progress with the team")
-    monkeypatch.setattr(nudges, "_init", lambda: None)
-    monkeypatch.setattr(ai.secrets, "get", lambda: "test-key")
-    monkeypatch.setattr(ai, "request", lambda messages,tools=False,max_tokens=None: {
-        "choices":[{"message":{"content":json.dumps({"id":item["id"],"reason":"A report may be useful"})}}]})
-    class Clock:
-        @classmethod
-        def now(cls):
-            return datetime.now(timezone.utc).astimezone().replace(hour=12)
-    monkeypatch.setattr(nudges,"datetime",Clock)
-    first=nudges.pick()
-    assert first and first["title"]==item["title"]
-    assert nudges.pick() is None
+
+def test_notification_worker_has_no_ai_dependency():
+    import inspect
+    from tend import notifications
+    source=inspect.getsource(notifications)
+    assert "nudges" not in source
+    assert "ai.request" not in source
+    assert "claim_notifications" in source
