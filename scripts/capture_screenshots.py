@@ -112,6 +112,8 @@ def main():
                 week_end=week_start+timedelta(days=6)
                 page.goto(base + "/snapshots?start="+week_start.isoformat()+"&end="+week_end.isoformat(), wait_until="networkidle")
                 page.locator(".day").first.wait_for()
+                assert page.locator("#weekdays span").all_text_contents() == ["Mon", "Tue", "Wed", "Thu", "Fri"], "Empty weekends must be hidden"
+                assert page.locator(".summary, .stat, .eyebrow").count() == 0, "Snapshot must not include summary cards"
                 page.screenshot(path=str(OUT / "snapshot-week.png"), full_page=True)
                 with page.expect_download() as download_info:
                     page.locator("#png").click()
