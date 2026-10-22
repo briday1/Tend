@@ -30,7 +30,7 @@ MCP and the browser use **the same database**. MCP tools can read and update sto
 
 ## What it does
 
-Conversational capture, question answering from stored threads, completion/waiting status changes, related thoughts, reminders based on explicit revisit dates, searchable history, local SQL storage, BYOK settings, and optional MCP access.
+Conversation and a separate categorized Board, AI-assisted automatic grouping, manual card editing (title, category, details, status and revisit date), accumulated notes, completion/waiting status changes, searchable history, local SQL storage, BYOK settings, and optional MCP access. On the Board, choose **Ask AI to organize** to draft an instruction in Conversation, review it, and send it. The AI can also choose categories while capturing new thoughts. Both views operate on the same underlying SQLite records.
 
 Current limits: reminders are surfaced when browsing (no OS push notifications); natural-language dates depend on the model; no scheduled background agent, automatic backup schedule, multi-device sync, or fully semantic long-term retrieval. The assistant uses a bounded tool-calling loop; providers without tool calling won't support the full experience.
 
