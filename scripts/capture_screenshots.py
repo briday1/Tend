@@ -5,6 +5,7 @@ Install: python -m pip install playwright
 Run:     python scripts/capture_screenshots.py
 
 Only synthetic sample records are used. Never reads the user's Tend database.
+All screenshot examples use generic Projects, Operations, and Product categories.
 """
 import os
 import subprocess
