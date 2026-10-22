@@ -31,3 +31,25 @@ body{background:var(--page)!important;color:var(--text)!important}header,.main,.
 .tend-mark .mark-leaf{fill:var(--logo-accent)}
 .tend-mark .mark-vein{fill:none;stroke:var(--logo-bg);stroke-width:2;stroke-linecap:round}
 :root[data-theme="dark"],:root[data-theme="solarized-dark"],:root[data-theme="dusk"],:root[data-theme="ocean"]{--task-card-bg:var(--paper);--task-card-text:var(--text);--task-card-muted:var(--muted);--task-card-border:var(--line)}
+
+/* Settings overlay controls: match the active WriteShape theme. */
+.settings #closeSettings,
+.settings #browseDatabase{
+  appearance:none;
+  -webkit-appearance:none;
+  background:var(--soft)!important;
+  color:var(--text)!important;
+  border:1px solid var(--line)!important;
+  border-radius:9px;
+  font:inherit;
+  box-shadow:none!important;
+  text-shadow:none!important;
+  filter:none!important;
+}
+.settings #closeSettings{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;padding:0;margin:0;flex-shrink:0;font-size:18px}
+.settings #browseDatabase{padding:10px 14px;min-height:40px}
+.settings #closeSettings:hover,
+.settings #browseDatabase:hover{background:var(--highlight)!important;color:var(--text)!important;border-color:var(--accent)!important}
+.settings #closeSettings:focus-visible,
+.settings #browseDatabase:focus-visible{outline:2px solid var(--accent)!important;outline-offset:2px}
+.settings #browseDatabase:disabled{opacity:.55;cursor:wait}
