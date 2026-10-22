@@ -16,16 +16,25 @@ def raster(size):
         for x in range(size):
             u = (x + .5) * 64 / size
             v = (y + .5) * 64 / size
-            # Rounded square with a white geometric T, echoing the current mark.
-            corner = min(u, 64-u)
-            vertical = min(v, 64-v)
-            inside = (corner >= 10 or vertical >= 10 or (corner-10)**2+(vertical-10)**2 <= 100)
+            # Horizon: a cream tile with three clean, layered landscape bands.
+            corner=min(u,64-u)
+            vertical=min(v,64-v)
+            inside=(corner>=13 or vertical>=13 or (corner-13)**2+(vertical-13)**2<=169)
+            dx=u-32;dy=v-32
+            circle=dx*dx+dy*dy<=25*25
             if not inside:
                 rgba=(0,0,0,0)
-            elif (12 <= u <= 52 and 15 <= v <= 22) or (28 <= u <= 36 and 15 <= v <= 49):
-                rgba=(250,252,247,255)
+            elif not circle:
+                rgba=(250,246,237,255)
             else:
-                rgba=(38,61,48,255)
+                import math
+                wave1=31+4*math.sin((u-10)/10)
+                wave2=39+4*math.sin((u-7)/9)
+                wave3=48+4*math.sin((u-12)/8)
+                if v>=wave3:rgba=(40,77,62,255)
+                elif v>=wave2:rgba=(93,134,108,255)
+                elif v>=wave1:rgba=(140,171,150,255)
+                else:rgba=(201,217,198,255)
             pixels.extend(rgba)
     raw=zlib.compress(bytes(pixels),9)
     return (b"\x89PNG\r\n\x1a\n"+png_chunk(b"IHDR",struct.pack(">2I5B",size,size,8,6,0,0,0))
