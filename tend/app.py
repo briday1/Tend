@@ -21,6 +21,7 @@ class Thread(BaseModel):
 class Change(BaseModel):
     title:str|None=None
     summary:str|None=None
+    category:str|None=None
     state:Literal["open","waiting","paused","settled"]|None=None
     revisit_at:datetime|None=None
 class Entry(BaseModel):
@@ -35,6 +36,10 @@ def found(x):
     return x
 @app.get("/")
 def home():return FileResponse(Path(__file__).with_name("index.html"))
+@app.get("/board")
+def board_page():return FileResponse(Path(__file__).with_name("board.html"))
+@app.get("/api/board")
+def board():return db.board()
 @app.get("/api/threads")
 def threads(q:str=""):return db.list_threads(q)
 @app.get("/api/overview")
