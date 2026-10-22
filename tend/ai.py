@@ -120,14 +120,17 @@ def request(messages,tools=True,max_tokens=None):
     except HTTPError as e:raise ValueError("Provider returned HTTP "+str(e.code)) from e
     except (URLError,TimeoutError) as e:raise ValueError("Could not reach AI provider") from e
 
-def chat(message):
+def chat(message, progress=None):
+    def status(text):
+        if progress:progress(text)
     from datetime import datetime
     transcript=[{"role":"system","content":SYSTEM+"\nCurrent local date/time: "+datetime.now().astimezone().isoformat()}]
     for item in store.conversation(28):
         if item["role"] in ("user","assistant"):transcript.append({"role":item["role"],"content":item["body"]})
     transcript.append({"role":"user","content":message})
     used=[]
-    for i in range(6):
+    for i in range(4):
+        status("Connecting to AI provider…" if i==0 else "Processing tool results…")
         answer=request(transcript)
         choice=answer.get("choices",[{}])[0]
         msg=choice.get("message",{})
@@ -142,6 +145,7 @@ def chat(message):
                 result=dispatch(name,args)
             except (ValueError,KeyError,TypeError) as e:result={"error":str(e)}
             used.append(name)
+            status("Tool: "+name+" — "+("completed" if not isinstance(result,dict) or "error" not in result else "failed"))
             transcript.append({"role":"tool","tool_call_id":call["id"],"content":json.dumps(result,default=str)})
     return {"answer":"I reached the action limit. Please ask me to continue.","actions":used}
 
