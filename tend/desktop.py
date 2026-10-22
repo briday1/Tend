@@ -68,7 +68,7 @@ def main():
     finally:
         ctypes.windll.kernel32.CloseHandle(mutex)
 
-def start_and_open():
+def start_and_open(open_window=True):
     if sys.platform!="win32":
         raise SystemExit("Desktop launcher currently supports Windows.")
     if not healthy():
@@ -81,7 +81,7 @@ def start_and_open():
             raise RuntimeError("An outdated or different server is using Tend's port. Stop that process before launching the new Tend shortcut.")
         # Run the console Python interpreter with its console creation suppressed.
         # The supervisor prints progress; pythonw has no stdout and can crash on print().
-        py=sys.executable
+        py=os.environ.get("TEND_SERVICE_PYTHON",sys.executable)
         if py.lower().endswith("pythonw.exe"):
             py=py[:-len("pythonw.exe")]+"python.exe"
         flags=getattr(subprocess,"CREATE_NO_WINDOW",0)|getattr(subprocess,"CREATE_NEW_PROCESS_GROUP",0)
@@ -101,7 +101,7 @@ def start_and_open():
         else:
             log("Tend server failed to become ready; see server.log")
             raise RuntimeError("Tend did not start; see ~/.tend/server.log")
-    open_app()
+    if open_window:open_app()
     return child if 'child' in locals() else None
 
 def run_tray(server):
