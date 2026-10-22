@@ -5,9 +5,12 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel,Field
 from typing import Literal
 from . import store as db
+from .ai import reflect
 
 app=FastAPI(title="Tend")
 db.init()
+class Ask(BaseModel):
+    question:str=Field(min_length=1,max_length=1000)
 class Thread(BaseModel):
     title:str=Field(min_length=1,max_length=300)
     summary:str=""
@@ -51,3 +54,8 @@ def done(id:str,data:Done):return found(db.toggle(id,data.done))
 def link(id:str,data:Relation):
     if not db.link(id,data.other_id):raise HTTPException(404,"Thread not found")
     return db.get(id)
+
+@app.post("/api/reflect")
+def reflection(data:Ask):
+    try:return reflect(data.question)
+    except ValueError as exc:raise HTTPException(502,str(exc)) from exc
