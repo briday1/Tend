@@ -30,6 +30,7 @@ def stage(target,mode="move"):
     if mode not in ("move","existing"):raise ValueError("Choose Move current or Use existing")
     if os.environ.get("TEND_DB"):raise ValueError("Remove TEND_DB environment override before relocating the database")
     path=Path(target).expanduser().resolve()
+    if mode=="move" and path.is_dir():path=path/active_path().name
     if path.suffix.lower() not in (".sqlite3",".sqlite",".db"):raise ValueError("Use a .sqlite3, .sqlite, or .db filename")
     if path==active_path():raise ValueError("Choose a different destination")
     if mode=="move" and path.exists():raise ValueError("Destination exists; choose an unused file")
@@ -75,3 +76,26 @@ def validate_existing(path):
                 raise ValueError("File is not a recognized Tend database")
     except sqlite3.DatabaseError:
         raise ValueError("File is not a readable Tend SQLite database") from None
+
+def choose_folder():
+    """Open a native OS folder picker on the same machine running Tend."""
+    import subprocess,sys
+    script=(
+        "import tkinter as tk\n"
+        "from tkinter import filedialog\n"
+        "root=tk.Tk()\n"
+        "root.withdraw()\n"
+        "root.attributes('-topmost', True)\n"
+        "try:\n"
+        "    print(filedialog.askdirectory(parent=root,title='Select Tend database folder',mustexist=True) or '')\n"
+        "finally:\n"
+        "    root.destroy()\n"
+    )
+    try:
+        result=subprocess.run([sys.executable,"-c",script],text=True,capture_output=True,timeout=180,check=False)
+    except (OSError,subprocess.TimeoutExpired) as exc:
+        raise ValueError("Could not open native folder picker") from None
+    if result.returncode:
+        raise ValueError("Native folder picker unavailable on this computer")
+    folder=result.stdout.strip().splitlines()
+    return {"folder":folder[-1] if folder else None}
