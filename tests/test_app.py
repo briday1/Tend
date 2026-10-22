@@ -26,3 +26,14 @@ def test_related_and_home(client):
     assert client.post("/api/threads/"+a+"/links",json={"other_id":b}).status_code==200
     assert client.get("/api/threads/"+b).json()["related"][0]["id"]==a
     assert client.get("/").status_code==200
+
+def test_board_category_and_manual_edit(client):
+    thought=client.post("/api/threads",json={"title":"Experiment with a new interface"}).json()
+    id=thought["id"]
+    response=client.patch(f"/api/threads/{id}",json={"category":"Product ideas","summary":"Try different views","state":"waiting"})
+    assert response.status_code==200
+    assert response.json()["category"]=="Product ideas"
+    board=client.get("/api/board")
+    assert board.status_code==200
+    assert any(x["name"]=="Product ideas" and x["threads"][0]["id"]==id for x in board.json())
+    assert client.get("/board").status_code==200
