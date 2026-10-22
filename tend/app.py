@@ -3,6 +3,7 @@ import re
 from datetime import datetime
 from fastapi import FastAPI,HTTPException
 from fastapi.responses import FileResponse
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 from pydantic import BaseModel,Field
 from typing import Literal
 from . import store as db
@@ -10,6 +11,7 @@ from . import ai
 from .ai import reflect
 
 app=FastAPI(title="Tend")
+app.add_middleware(TrustedHostMiddleware,allowed_hosts=["127.0.0.1","localhost","[::1]"])
 db.init()
 class Ask(BaseModel):
     question:str=Field(min_length=1,max_length=1000)
@@ -76,7 +78,7 @@ def settings():return ai.public_config()
 @app.post("/api/settings")
 def settings_save(data:Provider):
     try:return ai.save(data.base_url,data.model,data.api_key,data.clear_key)
-    except ValueError as exc:raise HTTPException(422,str(exc)) from exc
+    except ValueError as exc:raise HTTPException(422,str(exc)) from None
 
 @app.get("/api/conversation")
 def history():return db.conversation()
