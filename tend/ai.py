@@ -117,8 +117,25 @@ def request(messages,tools=True,max_tokens=None):
        headers={"Authorization":"Bearer "+key,"Content-Type":"application/json"})
     try:
         with urlopen(req,timeout=22) as response:return json.load(response)
-    except HTTPError as e:raise ValueError("Provider returned HTTP "+str(e.code)) from e
-    except (URLError,TimeoutError) as e:raise ValueError("Could not reach AI provider") from e
+    except HTTPError as e:
+        detail={401:"API key was rejected (HTTP 401)",403:"Access forbidden; check account/model permissions (HTTP 403)",404:"API endpoint not found; check the base URL (HTTP 404)",429:"Provider rate limit or quota reached (HTTP 429)"}.get(e.code)
+        raise ValueError(detail or "AI provider returned HTTP "+str(e.code)) from e
+    except TimeoutError as e:
+        raise ValueError("AI provider timed out after 22 seconds. Check provider reachability or try again.") from e
+    except URLError as e:
+        import socket,ssl
+        reason=e.reason
+        if isinstance(reason,(TimeoutError,socket.timeout)):
+            detail="AI provider connection timed out. Check network/VPN or endpoint availability."
+        elif isinstance(reason,socket.gaierror):
+            detail="Cannot resolve the AI provider hostname. Check the URL, DNS and VPN."
+        elif isinstance(reason,ssl.SSLError):
+            detail="TLS certificate verification failed. Check network interception or provider certificate."
+        elif isinstance(reason,ConnectionRefusedError):
+            detail="AI provider refused the connection. Check endpoint address and network access."
+        else:
+            detail="Cannot connect to AI provider. Check VPN/network access and provider base URL."
+        raise ValueError(detail) from e
 
 def chat(message, progress=None):
     def status(text):
