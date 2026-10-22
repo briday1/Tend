@@ -161,8 +161,11 @@ def chat(message, progress=None):
         if item["role"] in ("user","assistant"):transcript.append({"role":item["role"],"content":item["body"]})
     transcript.append({"role":"user","content":message})
     used=[]
-    for i in range(4):
-        status("Connecting to AI provider…" if i==0 else "Processing tool results…")
+    max_rounds=12
+    for i in range(max_rounds):
+        status("Connecting to AI provider…" if i==0 else f"Processing tool results… ({i+1}/{max_rounds})")
+        if i==max_rounds-1:
+            transcript.append({"role":"system","content":"Tool budget is nearly exhausted. Finish the task using only necessary calls and provide a clear user-facing summary. Do not promise work that has not been done."})
         answer=request(transcript,progress=status)
         choice=answer.get("choices",[{}])[0]
         msg=choice.get("message",{})
@@ -179,7 +182,10 @@ def chat(message, progress=None):
             used.append(name)
             status("Tool: "+name+" — "+("completed" if not isinstance(result,dict) or "error" not in result else "failed"))
             transcript.append({"role":"tool","tool_call_id":call["id"],"content":json.dumps(result,default=str)})
-    return {"answer":"I reached the action limit. Please ask me to continue.","actions":used}
+    # Avoid claiming completion; tell the user which operations were attempted.
+    unique=list(dict.fromkeys(used))
+    status("Tool round limit reached.")
+    return {"answer":"I completed some operations but could not finish every step in one request. Tools used: "+(", ".join(unique) if unique else "none")+". Please specify what remains to finish.","actions":used}
 
 def reflect(question):
     return {"configured":public_config()["has_key"],"answer":chat(question)["answer"]}
