@@ -28,7 +28,7 @@ dev = ["pytest>=8", "httpx>=0.27"]
 include = ["tend*"]
 
 [tool.setuptools.package-data]
-tend = ["index.html", "board.html", "theme.css", "theme.js"]
+tend = ["index.html", "board.html", "theme.css", "theme.js", "favicon.svg"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
