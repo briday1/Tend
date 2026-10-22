@@ -5,7 +5,9 @@ from datetime import datetime, timezone
 from contextlib import contextmanager
 
 def now(): return datetime.now(timezone.utc).isoformat()
-def path(): return Path(os.environ.get("TEND_DB", Path.home()/".tend"/"tend.sqlite3")).expanduser()
+def path():
+    from .storage import active_path
+    return Path(os.environ["TEND_DB"]).expanduser() if os.environ.get("TEND_DB") else active_path()
 @contextmanager
 def conn():
     p=path();p.parent.mkdir(parents=True,exist_ok=True)
