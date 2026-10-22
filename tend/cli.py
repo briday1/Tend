@@ -1,10 +1,11 @@
 """Start Tend's local browser and HTTP MCP servers with one command."""
 import os
-import signal
 import subprocess
 import sys
 import time
 import webbrowser
+from urllib.request import urlopen
+from urllib.error import URLError
 from . import store
 
 def main():
@@ -27,6 +28,19 @@ def main():
         print(f"Tend MCP: http://127.0.0.1:{mcp_port}/mcp",flush=True)
         print(f"Local database: {store.path()}",flush=True)
         print("Press Ctrl+C to stop both servers.",flush=True)
+        # Wait for a valid response instead of opening an unavailable page.
+        deadline=time.monotonic()+20
+        ready=False
+        while time.monotonic()<deadline:
+            if any(child.poll() is not None for child in children):
+                raise RuntimeError("Tend failed to start. See server output above.")
+            try:
+                with urlopen(url,timeout=0.8) as response:
+                    ready=response.status==200
+                if ready:break
+            except (URLError,OSError,TimeoutError):
+                time.sleep(.2)
+        if not ready:raise RuntimeError("Tend did not become ready on "+url)
         if env.get("TEND_NO_BROWSER")!="1":
             webbrowser.open(url)
         while all(child.poll() is None for child in children):
