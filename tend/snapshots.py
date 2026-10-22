@@ -16,7 +16,7 @@ def snapshot(start: str, end: str, category: str = "") -> dict:
     for t in threads:
         due = (t.get("due_at") or "")[:10]
         if start <= due <= end:
-            byday[due]["tasks"].append({"id":t["id"],"title":t["title"],"category":t["category"],"state":t["state"],"date":due,"href":"/#task/"+t["id"]})
+            byday[due]["tasks"].append({"id":t["id"],"title":t["title"],"category":t["category"],"state":t["state"],"date":due,"href":"/board#task/"+t["id"]})
     for e in events:
         day=e["occurred_at"][:10]
         byday[day]["activity"].append({"thread_id":e["thread_id"],"title":e["title"],"category":e["category"],"kind":e["kind"],"body":e["body"],"occurred_at":e["occurred_at"]})
