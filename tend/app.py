@@ -36,6 +36,8 @@ class Relation(BaseModel):
 def found(x):
     if x is None:raise HTTPException(404,"Not found")
     return x
+@app.get("/favicon.svg")
+def favicon():return FileResponse(Path(__file__).with_name("favicon.svg"),media_type="image/svg+xml")
 @app.get("/theme.css")
 def theme_css():return FileResponse(Path(__file__).with_name("theme.css"),media_type="text/css")
 @app.get("/theme.js")
