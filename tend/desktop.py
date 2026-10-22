@@ -38,6 +38,13 @@ def open_app():
             return
     webbrowser.open(url)
 
+def show_error(message):
+    try:
+        import ctypes
+        ctypes.windll.user32.MessageBoxW(None,str(message),"Tend launcher",0x10)
+    except Exception:
+        pass
+
 def main():
     if sys.platform!="win32":
         raise SystemExit("Desktop launcher currently supports Windows.")
@@ -78,4 +85,5 @@ if __name__=="__main__":
     try:main()
     except Exception as exc:
         log(type(exc).__name__+": "+str(exc))
+        show_error(str(exc)+"\n\nSee %USERPROFILE%\\.tend\\desktop-launch.log")
         raise
