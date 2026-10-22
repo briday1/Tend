@@ -29,7 +29,7 @@ def make_demo(db):
         "category": "Projects", "recurrence": "weekly",
         "next_occurrence": "2027-01-08T17:00:00+00:00",
         "due_action": "activity_report",
-        "action_prompt": "Summarize the week's recorded branch activity.",
+        "action_prompt": "Summarize the week's recorded project activity.",
         "action_config": {"period": "week", "category": "Projects"},
     })
     for title, category, state in [
