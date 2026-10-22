@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS activity(id TEXT PRIMARY KEY,thread_id TEXT NOT NULL 
         if "next_occurrence" not in columns:c.execute("ALTER TABLE threads ADD COLUMN next_occurrence TEXT")
         if "due_action" not in columns:c.execute("ALTER TABLE threads ADD COLUMN due_action TEXT")
         if "action_config" not in columns:c.execute("ALTER TABLE threads ADD COLUMN action_config TEXT")
+        if "recurring_notified_for" not in columns:c.execute("ALTER TABLE threads ADD COLUMN recurring_notified_for TEXT")
 def query(sql,args=()):
     with conn() as c: return [dict(r) for r in c.execute(sql,args)]
 def get(id):
@@ -112,21 +113,34 @@ def board():
     return [{"name":name,"threads":items} for name,items in sorted(groups.items(),key=lambda x:(x[0]=="Unsorted",x[0].casefold()))]
 
 def claim_notifications():
-    """Claim due reminders once per scheduled time."""
-    from datetime import datetime,timezone,timedelta
+    """Claim one reminder for each due timestamp, including recurring tasks."""
+    from datetime import timedelta
     current=datetime.now(timezone.utc)
     claimed=[]
     with conn() as c:
-        rows=c.execute("SELECT id,title,revisit_at,due_action,action_config FROM threads WHERE revisit_at IS NOT NULL AND state!='settled' AND (notified_for IS NULL OR notified_for!=revisit_at)").fetchall()
+        rows=c.execute("""SELECT id,title,revisit_at,notified_for,recurrence,next_occurrence,
+                              recurring_notified_for,due_action
+                          FROM threads WHERE state!='settled'
+                          AND (revisit_at IS NOT NULL OR (recurrence IS NOT NULL AND next_occurrence IS NOT NULL))""").fetchall()
         for row in rows:
-            try:due=datetime.fromisoformat(row["revisit_at"].replace("Z","+00:00"))
-            except ValueError:continue
-            if due.tzinfo is None:continue
-            if current-timedelta(hours=24)<=due<=current and len(claimed)<3:
-                c.execute("UPDATE threads SET notified_for=? WHERE id=?",(row["revisit_at"],row["id"]))
-                item=dict(row)
-                if item["due_action"]=="activity_report":item["report"]=report_for_task(item["id"],anchor=item["revisit_at"])
-                claimed.append(item)
+            item=dict(row)
+            schedules=[("revisit_at","notified_for")]
+            if item["recurrence"]:schedules.append(("next_occurrence","recurring_notified_for"))
+            for date_field,claim_field in schedules:
+                stamp=item[date_field]
+                if not stamp or item[claim_field]==stamp:continue
+                try:due=datetime.fromisoformat(stamp.replace("Z","+00:00"))
+                except ValueError:continue
+                if due.tzinfo is None:continue
+                if not (current-timedelta(hours=24)<=due<=current):continue
+                if len(claimed)>=3:return claimed
+                # Build content before marking the occurrence notified.
+                notice={"id":item["id"],"title":item["title"],"revisit_at":stamp,"due_action":item["due_action"]}
+                if item["due_action"]=="activity_report":
+                    try:notice["report"]=report_for_task(item["id"],anchor=stamp)
+                    except (ValueError,TypeError) as exc:notice["report_error"]=str(exc)
+                c.execute(f"UPDATE threads SET {claim_field}=? WHERE id=?",(stamp,item["id"]))
+                claimed.append(notice)
     return claimed
 
 def daily_brief():
