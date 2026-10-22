@@ -52,11 +52,13 @@ def main():
         logs=Path.home()/".tend"/"server.log"
         logs.parent.mkdir(parents=True,exist_ok=True)
         with logs.open("ab") as output:
-            subprocess.Popen([py,"-m","tend.cli"],env=env,creationflags=flags,
+            child=subprocess.Popen([py,"-m","tend.cli"],env=env,creationflags=flags,
                              stdin=subprocess.DEVNULL,stdout=output,stderr=subprocess.STDOUT,
                              close_fds=True)
-        for _ in range(100):
+        for _ in range(120):
             if healthy():break
+            if child.poll() is not None:
+                raise RuntimeError("Tend server process exited. Check ~/.tend/server.log")
             time.sleep(.25)
         else:
             log("Tend server failed to become ready; see server.log")
