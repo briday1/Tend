@@ -13,7 +13,7 @@ def get_snapshot(start:str,end:str,category:str="")->dict:
 def task_link(thread_id:str)->dict:
     """Return a clickable local Tend task link, suitable for rich text or fallback navigation."""
     t=db.get(thread_id)
-    return {"id":thread_id,"title":t["title"],"href":"/snapshots#task/"+thread_id} if t else {"error":"Thread not found"}
+    return {"id":thread_id,"title":t["title"],"href":"/board#task/"+thread_id} if t else {"error":"Thread not found"}
 @mcp.tool()
 def whats_on_my_mind()->dict:
     """Return open, due, waiting, paused, and settled threads."""
