@@ -46,6 +46,10 @@ def favicon():return FileResponse(Path(__file__).with_name("favicon.svg"),media_
 def theme_css():return FileResponse(Path(__file__).with_name("theme.css"),media_type="text/css")
 @app.get("/theme.js")
 def theme_js():return FileResponse(Path(__file__).with_name("theme.js"),media_type="application/javascript")
+@app.get("/api/health")
+def health():return {"app":"tend","status":"ok"}
+@app.get("/manifest.webmanifest")
+def manifest():return FileResponse(Path(__file__).with_name("manifest.webmanifest"),media_type="application/manifest+json")
 @app.get("/")
 def home():return FileResponse(Path(__file__).with_name("index.html"))
 @app.get("/board")
