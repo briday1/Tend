@@ -145,6 +145,7 @@ class ActivityInput(BaseModel):
 
 class StorageLocation(BaseModel):
     path:str=Field(min_length=1,max_length=2048)
+    mode:Literal["move","existing"]="move"
 
 @app.post("/api/threads/{id}/activity",status_code=201)
 def add_activity(id:str,data:ActivityInput):
@@ -163,5 +164,5 @@ def storage_info():return storage.info()
 
 @app.post("/api/storage")
 def stage_storage(data:StorageLocation):
-    try:return storage.stage(data.path)
+    try:return storage.stage(data.path,data.mode)
     except ValueError as exc:raise HTTPException(422,str(exc)) from None
