@@ -73,6 +73,14 @@ def set_recurrence(thread_id:str,frequency:str,next_occurrence:str)->dict:
 def complete_recurring_occurrence(thread_id:str,description:str="Completed recurring occurrence")->dict:
     """Log completing a cycle and schedule the next recurrence."""
     return db.complete_occurrence(thread_id,description)
+@mcp.tool()
+def set_task_due_action(thread_id:str,action:str="activity_report",period:str="week",category:str="")->dict:
+    """Attach an activity report to a task's reminder (or action='none' to clear)."""
+    return db.configure_due_action(thread_id,action,period,category)
+@mcp.tool()
+def run_task_due_action(thread_id:str,anchor:str="")->dict:
+    """Preview a task's linked reporting action, without any AI or modifying its recurrence."""
+    return db.report_for_task(thread_id,anchor or None)
 if __name__=="__main__":
     db.init()
     mcp.run(transport="streamable-http" if "--http" in sys.argv else "stdio")
