@@ -152,8 +152,9 @@ def history():return db.conversation()
 def chat(data:Message):
     message=data.text.strip()
     if not message:raise HTTPException(422,"Message required")
-    try:from .snapshot_intent import respond as snapshot_respond
-    result=snapshot_respond(message) or (commands.execute(message) if message.startswith("/") else ai.chat(message))
+    try:
+        from .snapshot_intent import respond as snapshot_respond
+        result=snapshot_respond(message) or (commands.execute(message) if message.startswith("/") else ai.chat(message))
     except ValueError as exc:raise HTTPException(502,str(exc)) from exc
     db.remember("user",message)
     db.remember("assistant",result["answer"])
