@@ -187,8 +187,17 @@ def chat(message, progress=None):
         msg=choice.get("message",{})
         calls=msg.get("tool_calls") or []
         if not calls:
-            status("Response ready")
-            return {"answer":msg.get("content") or "I couldn't form a response.","actions":used}
+            content=msg.get("content") or "I couldn't form a response."
+            finish=choice.get("finish_reason")
+            if "reached the action limit" in content.lower():
+                status("Provider response mentioned an action limit; Tend has no local tool-count limit")
+                # Distinguish a provider-authored message from a local exception.
+                content += "\\n\\n*This message came from the configured AI model, not a Tend action-count limit.*"
+            elif finish in ("length","content_filter"):
+                status("Provider ended response: "+finish)
+            else:
+                status("Response ready")
+            return {"answer":content,"actions":used}
         transcript.append({"role":"assistant","content":msg.get("content"),"tool_calls":calls})
         redundant=True
         for call in calls:
