@@ -13,6 +13,7 @@ $shortcut.TargetPath = $pythonw
 $shortcut.Arguments = '-m tend.desktop'
 $shortcut.WorkingDirectory = $repo
 $shortcut.Description = 'Launch Tend, starting its local services if necessary'
+$shortcut.WindowStyle = 7 # Minimized as a fallback; pythonw normally creates no window
 $edgeRoot = [Environment]::GetEnvironmentVariable('ProgramFiles(x86)')
 if ($edgeRoot) {
     $edge = Join-Path $edgeRoot 'Microsoft\Edge\Application\msedge.exe'
