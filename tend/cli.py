@@ -43,6 +43,8 @@ def main():
         [sys.executable,"-m","tend.notifications"]
     ]
     children=[]
+    restart_history={}
+    service_names=("web","mcp","notifications")
     # On Windows, child python.exe processes otherwise create their own console.
     flags=getattr(subprocess,"CREATE_NO_WINDOW",0) if os.name=="nt" else 0
     log_path=Path.home()/".tend"/"services.log"
@@ -57,7 +59,7 @@ def main():
         print(f"Tend browser: {url}",flush=True)
         print(f"Tend MCP: http://127.0.0.1:{mcp_port}/mcp",flush=True)
         print(f"Local database: {store.path()}",flush=True)
-        print("Press Ctrl+C to stop both servers.",flush=True)
+        print("Press Ctrl+C to stop Tend when running in a terminal.",flush=True)
         # Wait for a valid response instead of opening an unavailable page.
         deadline=time.monotonic()+20
         ready=False
@@ -74,8 +76,22 @@ def main():
         if env.get("TEND_NO_BROWSER")!="1":
             webbrowser.open(url)
         while True:
-            if any(child.poll() is not None for child in children):
-                raise RuntimeError("A Tend server stopped unexpectedly")
+            for index,child in enumerate(children):
+                exit_code=child.poll()
+                if exit_code is None:
+                    continue
+                name=service_names[index]
+                now=time.monotonic()
+                times=[t for t in restart_history.get(name,[]) if now-t<120]
+                if len(times)>=3:
+                    raise RuntimeError(f"Tend {name} service repeatedly exited (last code {exit_code}); see {log_path}")
+                times.append(now)
+                restart_history[name]=times
+                print(f"Tend {name} service exited (code {exit_code}); restarting ({len(times)}/3 within 2 minutes)",flush=True)
+                with log_path.open("ab") as output:
+                    children[index]=subprocess.Popen(commands[index],env=env,creationflags=flags,
+                        stdin=subprocess.DEVNULL,stdout=output,stderr=subprocess.STDOUT,
+                        close_fds=True)
             if storage.load().get("pending"):
                 print("Switching Tend database; restarting local services...",flush=True)
                 for child in children:
