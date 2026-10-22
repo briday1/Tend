@@ -152,12 +152,12 @@ _attention_cache={"signature":None,"expires":0.0,"items":[]}
 def attention(force=False):
     import time
     threads=[t for t in store.list_threads() if t["state"]!="settled"]
-    signature=tuple((t["id"],t["updated_at"],t["revisit_at"],t["state"]) for t in threads)
+    signature=tuple((t["id"],t["updated_at"],t["revisit_at"],t["state"],t.get("next_occurrence")) for t in threads)
     current=time.monotonic()
     if not force and _attention_cache["signature"]==signature and current<_attention_cache["expires"]:
         return {"items":_attention_cache["items"],"source":"cached"}
     candidates=threads[:80]
-    due=[t for t in candidates if t["due"]]
+    due=[t for t in candidates if t["due"] or (t.get("recurrence") and t.get("next_occurrence") and t["next_occurrence"]<=store.now())]
     fallback=[{"id":t["id"],"title":t["title"],"reason":"Scheduled to revisit","state":t["state"]} for t in due[:4]]
     if not candidates:
         selected=[]
@@ -167,11 +167,11 @@ def attention(force=False):
         try:
             context=[{"id":t["id"],"title":t["title"],"summary":t["summary"][:500],
                       "state":t["state"],"revisit_at":t["revisit_at"],"due_at":t.get("due_at"),"recurrence":t.get("recurrence"),"next_occurrence":t.get("next_occurrence"),"due":t["due"],
-                      "updated_at":t["updated_at"]} for t in candidates]
+                      "updated_at":t["updated_at"],"recurrence":t.get("recurrence"),"next_occurrence":t.get("next_occurrence")} for t in candidates]
             prompt=[{"role":"system","content":
                 "Curate the attention sidebar of a personal assistant. Select 0 to 5 items only if "
                 "they merit attention now: due reminders, near-term commitments, unresolved blockers, "
-                "or a meaningful decision. Do NOT show every active item. If nothing merits attention, "
+                "or a meaningful decision, including recurring check-ins now due. Do NOT show every active item. If nothing merits attention, "
                 "return an empty list. Only use supplied IDs, and do not invent facts. Return JSON "
                 "object with one key 'items', an array of objects with 'id' and brief 'reason'."},
                     {"role":"user","content":json.dumps(context,ensure_ascii=False)}]
