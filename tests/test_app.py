@@ -180,3 +180,17 @@ def test_recurring_due_is_in_overview(client):
     t=store.create("Weekly activity report")
     store.update(t["id"],{"recurrence":"weekly","next_occurrence":"2020-01-01T00:00:00+00:00"})
     assert any(item["id"]==t["id"] for item in store.overview()["due"])
+
+def test_task_action_editor_persists_prompt_and_schedule(client):
+    task=client.post("/api/threads",json={"title":"Weekly activity report"}).json()
+    response=client.patch("/api/threads/"+task["id"],json={
+        "recurrence":"weekly","next_occurrence":"2026-10-23T17:00:00Z",
+        "due_action":"activity_report",
+        "action_prompt":"Summarize Branch Activity work for the week.",
+        "action_config":{"period":"week","category":"Branch Activity"}})
+    assert response.status_code==200, response.text
+    saved=client.get("/api/threads/"+task["id"]).json()
+    assert saved["action_prompt"]=="Summarize Branch Activity work for the week."
+    assert saved["action_config"]=={"period":"week","category":"Branch Activity"}
+    assert saved["recurrence"]=="weekly"
+    assert saved["due_action"]=="activity_report"
