@@ -147,3 +147,14 @@ The shortcut installer now generates a multi-resolution `tend.ico` in the reposi
 The Board now starts with a compact list of categories and item counts. Select any category to see its tasks in the list immediately below, or select **All categories** to see everything. Searching narrows both the category list and task list. Tasks are prioritized for display when deadlines or attention dates are due, but remain editable in their detail panel. This avoids rendering an ever-expanding grid of every task at once.
 
 If chat reports HTTP 404 for `/api/chat/stream`, an old server may still be bound to port 8765. Shut down the old Tend processes and relaunch the updated desktop shortcut; Tend now detects incompatible server capabilities at startup and displays a clearer error.
+
+### Error: Tend port is already in use
+
+If the running server has the current streaming chat API, launching `tend.exe` again now reuses it rather than failing. If an **older** Tend server still owns port 8765, it must be shut down once to load the updated code. The Windows desktop shortcut now shows a visible error dialog instead of silently doing nothing. To identify the process in PowerShell:
+
+```powershell
+Get-NetTCPConnection -LocalPort 8765 -State Listen | Select-Object LocalAddress,OwningProcess
+Get-CimInstance Win32_Process | Where-Object { $_.ProcessId -in (Get-NetTCPConnection -LocalPort 8765 -State Listen).OwningProcess } | Select-Object ProcessId,Name,CommandLine
+```
+
+Verify the process command line really belongs to Tend before stopping it. Then close its original command window or stop **that specific verified PID** using `Stop-Process -Id <PID>` and relaunch the shortcut. Don't terminate all Python processes indiscriminately; other Python apps may be running. If the old Tend supervisor automatically relaunches the web worker, shut down that supervisor too using its known terminal/session before restarting.
