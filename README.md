@@ -183,3 +183,7 @@ powershell -ExecutionPolicy Bypass -File .\\install-desktop.ps1
 ```
 
 The installation includes the `pystray`, `Pillow`, and `psutil` dependencies needed for the Windows tray. The chat screen now shows **Loading conversation…** while history loads, with an explicit timeout/error message instead of looking stuck on an empty welcome message. The desktop launcher has not been verified on every Windows setup.
+
+### Horizon icon refresh (desktop, tray, and browser)
+
+Tend's header, browser favicon, app manifest, and system tray now use Horizon icon artwork from the same PNG renderer as the Windows shortcut's ICO. The installer writes `tend-horizon.ico` (a new filename to avoid stale Windows shortcut icon caches). Run `git pull`, then `powershell -ExecutionPolicy Bypass -File .\\install-desktop.ps1` to refresh the shortcut. **Fully exit the existing Tend tray instance before reopening**: an already-running tray process keeps its old icon and code. Hard-refresh the browser app if it shows an old favicon. Chromium's `--app` window may still display the Edge/Chrome taskbar identity instead of the page favicon, depending on the browser and Windows; the favicon cannot fully control native browser chrome.
