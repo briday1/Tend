@@ -123,3 +123,7 @@ AI-powered Attention-panel curation is separate: opening or refreshing the inter
 A browser-installed PWA icon only opens the localhost URL; Chrome and Edge cannot start Python services from it. Use the **Windows desktop shortcut** created by `install-desktop.ps1` instead. It checks the local health endpoint, starts the Tend server if needed, waits for readiness, and then opens an app window.
 
 If you previously installed Tend through Chrome or Edge, unpin or uninstall that browser-only app so you do not confuse it with the launcher. Re-run `powershell -ExecutionPolicy Bypass -File .\install-desktop.ps1` from the repository after updating. If the launcher fails, check `%USERPROFILE%\.tend\server.log` and `%USERPROFILE%\.tend\desktop-launch.log`.
+
+### Windows command window stays open or closing it stops Tend
+
+Update the repository and reinstall the editable package, then **stop any Tend server previously started in PowerShell** before using the desktop shortcut. If a console-launched server is already running, the shortcut will correctly reuse that server; closing its PowerShell window will still stop it. Start a fresh instance through the desktop shortcut so the parent process is detached. The launcher now also starts its child web, MCP and notification Python processes with Windows no-console flags and sends their output to `%USERPROFILE%\.tend\services.log`. Server-supervisor logs are at `%USERPROFILE%\.tend\server.log`. Recreate the shortcut with `powershell -ExecutionPolicy Bypass -File .\install-desktop.ps1` if needed.
