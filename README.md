@@ -102,3 +102,9 @@ Tend runs locally on loopback only. The new shortcut launches a detached local s
 While you're chatting with Tend, the assistant can decide that a future **Bring to attention** notification is useful and save the trigger in SQLite. The notification worker checks those saved times locally every 20 seconds and delivers desktop notifications **without AI requests or token usage**. It never asks the model whether to send something. No autonomous token-consuming polling occurs between conversations.
 
 AI-powered Attention-panel curation is separate: opening or refreshing the interface may call the configured model during that active browser session. Explicit scheduled notifications never need another model call.
+
+## If an installed Tend app says "site not found"
+
+A browser-installed PWA icon only opens the localhost URL; Chrome and Edge cannot start Python services from it. Use the **Windows desktop shortcut** created by `install-desktop.ps1` instead. It checks the local health endpoint, starts the Tend server if needed, waits for readiness, and then opens an app window.
+
+If you previously installed Tend through Chrome or Edge, unpin or uninstall that browser-only app so you do not confuse it with the launcher. Re-run `powershell -ExecutionPolicy Bypass -File .\install-desktop.ps1` from the repository after updating. If the launcher fails, check `%USERPROFILE%\.tend\server.log` and `%USERPROFILE%\.tend\desktop-launch.log`.
