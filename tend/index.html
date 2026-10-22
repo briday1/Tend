@@ -48,7 +48,7 @@ async function processQueue(){
      const event=JSON.parse(line);
      if(event.type==='status'){
        steps.push(event.message);
-       pending.textContent=steps.join('\\n');
+       pending.textContent=steps.join('\n');
      }else if(event.type==='done'){
        pending.innerHTML=event.answer_html||'';
        if(!event.answer_html)pending.textContent=event.answer;
@@ -60,7 +60,7 @@ async function processQueue(){
      const {value,done}=await reader.read();
      if(done)break;
      buffer+=decoder.decode(value,{stream:true});
-     const lines=buffer.split('\\n');buffer=lines.pop();
+     const lines=buffer.split('\n');buffer=lines.pop();
      for(const line of lines)consume(line);
    }
    if(buffer.trim())consume(buffer);
