@@ -177,6 +177,29 @@ def activity_report(period="week",anchor=None):
     rows=query("SELECT a.*,t.title,t.category FROM activity a JOIN threads t ON t.id=a.thread_id WHERE occurred_at>=? AND occurred_at<? ORDER BY occurred_at DESC",(start.isoformat(),end.isoformat()))
     return {"period":period,"start":start.isoformat(),"end":end.isoformat(),"events":rows,"count":len(rows)}
 
+def report_for_task(thread_id,anchor=None):
+    """Return a reporting-period snapshot using logged activity; no AI calls."""
+    from datetime import timedelta
+    t=get(thread_id)
+    if not t or t.get("due_action")!="activity_report":raise ValueError("No activity-report action configured")
+    config=t.get("action_config") or {}
+    ref=datetime.fromisoformat(anchor.replace("Z","+00:00")) if anchor else datetime.now(timezone.utc)
+    if ref.tzinfo is None:raise ValueError("Report anchor requires timezone")
+    # Include the most recently finished interval at the due instant.
+    result=activity_report(config.get("period","week"),(ref-timedelta(microseconds=1)).isoformat())
+    category=config.get("category")
+    if category:result["events"]=[event for event in result["events"] if event["category"]==category]
+    result["count"]=len(result["events"])
+    result["category"]=category or None
+    result["thread_id"]=thread_id
+    return result
+
+def configure_due_action(thread_id,action="activity_report",period="week",category=""):
+    if not get(thread_id):raise ValueError("Thread not found")
+    if action=="none":return update(thread_id,{"due_action":None,"action_config":{}})
+    if action!="activity_report":raise ValueError("Unsupported action")
+    return update(thread_id,{"due_action":"activity_report","action_config":{"period":period,"category":category}})
+
 def advance_occurrence(value,frequency):
     from calendar import monthrange
     from datetime import timedelta
