@@ -166,3 +166,8 @@ def storage_info():return storage.info()
 def stage_storage(data:StorageLocation):
     try:return storage.stage(data.path,data.mode)
     except ValueError as exc:raise HTTPException(422,str(exc)) from None
+
+@app.post("/api/storage/choose-folder")
+def select_storage_folder():
+    try:return storage.choose_folder()
+    except ValueError as exc:raise HTTPException(503,str(exc)) from None
