@@ -141,3 +141,9 @@ To troubleshoot your API key, model name, or custom GenAI.mil endpoint, open **S
 ### Windows desktop icon
 
 The shortcut installer now generates a multi-resolution `tend.ico` in the repository and assigns it to the Windows `.lnk` file, instead of borrowing the Microsoft Edge icon. Re-run `powershell -ExecutionPolicy Bypass -File .\install-desktop.ps1` to refresh an existing shortcut. Windows may cache old shortcut icons temporarily. The standalone browser window's title-bar/taskbar icon can still depend on Edge/Chrome app-window behavior; the shortcut itself uses Tend's ICO.
+
+## Compact category list
+
+The Board now starts with a compact list of categories and item counts. Select any category to see its tasks in the list immediately below, or select **All categories** to see everything. Searching narrows both the category list and task list. Tasks are prioritized for display when deadlines or attention dates are due, but remain editable in their detail panel. This avoids rendering an ever-expanding grid of every task at once.
+
+If chat reports HTTP 404 for `/api/chat/stream`, an old server may still be bound to port 8765. Shut down the old Tend processes and relaunch the updated desktop shortcut; Tend now detects incompatible server capabilities at startup and displays a clearer error.
