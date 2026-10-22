@@ -57,7 +57,7 @@ def theme_css():return FileResponse(Path(__file__).with_name("theme.css"),media_
 @app.get("/theme.js")
 def theme_js():return FileResponse(Path(__file__).with_name("theme.js"),media_type="application/javascript")
 @app.get("/api/health")
-def health():return {"app":"tend","status":"ok","streaming_chat":True,"board_categories":True}
+def health():return {"app":"tend","status":"ok","streaming_chat":True,"board_categories":True,"tool_runner":"unbounded-v2"}
 @app.get("/manifest.webmanifest")
 def manifest():return FileResponse(Path(__file__).with_name("manifest.webmanifest"),media_type="application/manifest+json")
 @app.get("/")
