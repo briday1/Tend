@@ -24,17 +24,17 @@ def make_demo(db):
     os.environ["TEND_CONFIG"] = str(db.parent / "empty-provider.json")
     from tend import store
     store.init()
-    report = store.create("Weekly activity report", "Summarize recent Branch Activity.")
+    report = store.create("Weekly activity report", "Summarize recent Projects.")
     store.update(report["id"], {
-        "category": "Branch Activity", "recurrence": "weekly",
+        "category": "Projects", "recurrence": "weekly",
         "next_occurrence": "2027-01-08T17:00:00+00:00",
         "due_action": "activity_report",
         "action_prompt": "Summarize the week's recorded branch activity.",
-        "action_config": {"period": "week", "category": "Branch Activity"},
+        "action_config": {"period": "week", "category": "Projects"},
     })
     for title, category, state in [
-        ("Prepare briefing notes", "Branch Activity", "open"),
-        ("Review project milestones", "Branch Activity", "waiting"),
+        ("Prepare briefing notes", "Projects", "open"),
+        ("Review project milestones", "Projects", "waiting"),
         ("Renew development certificate", "Operations", "open"),
         ("Investigate dashboard bug", "Product", "open"),
         ("Update documentation", "Product", "paused"),
@@ -47,7 +47,7 @@ def make_demo(db):
     store.update(archived["id"], {"category": "Operations"})
     store.archive_thread(archived["id"])
     store.remember("user", "What needs my attention this week?")
-    store.remember("assistant", "There are a few active items in **Branch Activity** and **Operations**. The weekly activity report is scheduled, and milestone review is waiting on input.")
+    store.remember("assistant", "There are a few active items in **Projects** and **Operations**. The weekly activity report is scheduled, and milestone review is waiting on input.")
     return report["id"]
 
 
