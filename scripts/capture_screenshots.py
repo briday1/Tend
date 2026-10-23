@@ -52,8 +52,9 @@ def make_demo(db):
     for title,cat,offset in [("Prepare briefing notes","Projects",0),("Investigate dashboard bug","Product",2),("Renew development certificate","Operations",4)]:
         matches=[t for t in store.list_threads() if t["title"]==title]
         if matches:store.update(matches[0]["id"],{"due_at":(next_monday+timedelta(days=offset)).isoformat()+"T12:00:00Z"})
-    for title,categories,offset in [("Plan monthly review",["Operations","Projects"],1),
-                                    ("Review project milestones",["Projects","Product"],3)]:
+    for title,categories,offset in [("Plan monthly review",["Operations","Projects"],0),
+                                    ("Review project milestones",["Projects","Product"],2),
+                                    ("Update documentation",["Product"],0)]:
         task=next(t for t in store.list_threads() if t["title"]==title)
         store.update(task["id"],{"categories":categories,"due_at":(next_monday+timedelta(days=offset)).isoformat()+"T12:00:00Z"})
     store.remember("user", "What needs my attention this week?")
@@ -72,6 +73,45 @@ def wait_for_server(base, proc):
         except OSError:
             time.sleep(0.25)
     raise RuntimeError("Screenshot server never became ready")
+
+
+def request_snapshot(page, message):
+    count = page.locator('.snapshot-frame').count()
+    page.locator('#message').fill(message)
+    page.locator('#composer').evaluate('(form) => form.requestSubmit()')
+    page.wait_for_function('(count) => document.querySelectorAll(".snapshot-frame").length > count', arg=count)
+    page.locator('.snapshot-frame').last.content_frame.locator('.task').first.wait_for()
+    page.wait_for_function("""() => [...document.querySelectorAll('.snapshot-frame')].every(f =>
+        Math.abs(f.getBoundingClientRect().height-f.contentDocument.querySelector('.shell').getBoundingClientRect().height)<2)""")
+
+
+def verify_snapshot_layers(page):
+    theme = page.evaluate('document.documentElement.dataset.theme')
+    for name in ['light','dark','solarized-light','solarized-dark','sepia','sage','rose','dusk','ocean']:
+        page.evaluate('(name) => document.documentElement.dataset.theme=name', name)
+        page.wait_for_function('(name) => [...document.querySelectorAll(".snapshot-frame")].every(f=>f.contentDocument.documentElement.dataset.theme===name)', arg=name)
+        assert page.evaluate("""() => [...document.querySelectorAll('.snapshot-frame')].every(f => {
+            const bubble=f.closest('.bubble.assistant'), style=getComputedStyle(bubble);
+            const d=f.contentDocument, css=e=>f.contentWindow.getComputedStyle(e);
+            const transparent=e=>css(e).backgroundColor==='rgba(0, 0, 0, 0)';
+            return style.backgroundColor!=='rgba(0, 0, 0, 0)' && style.borderTopWidth==='1px'
+                && ['html','body','.shell','.sheet','.calendar-head','.weekdays','.grid'].every(s=>transparent(d.querySelector(s)))
+                && [...d.querySelectorAll('.day')].every(transparent)
+                && [...d.querySelectorAll('.task')].every(t=>!transparent(t));
+        })"""), 'Keep the chat bubble filled, calendar cells transparent, and project blocks colored in '+name
+    page.evaluate('(theme) => document.documentElement.dataset.theme=theme', theme)
+    page.wait_for_function('(theme) => [...document.querySelectorAll(".snapshot-frame")].every(f=>f.contentDocument.documentElement.dataset.theme===theme)', arg=theme)
+
+
+def capture_calendar(page, filename):
+    bubble = page.locator('.bubble.assistant:has(.snapshot-frame)').last
+    viewport = page.viewport_size
+    # The enclosing chat scroll area must fit the full bubble, including a month.
+    page.set_viewport_size({**viewport, 'height': max(viewport['height'], round(bubble.bounding_box()['height']) + 350)})
+    try:
+        bubble.screenshot(path=str(OUT / filename))
+    finally:
+        page.set_viewport_size(viewport)
 
 
 def main():
@@ -103,13 +143,10 @@ def main():
                     status=200, content_type="application/json",
                     body='{"items":[],"source":"demo"}'))
                 page.goto(base + "/", wait_until="networkidle")
-                page.locator("#message").fill("give me my next week snapshot")
-                page.locator("#composer").evaluate("(form) => form.requestSubmit()")
-                page.locator(".snapshot-frame").first.wait_for(timeout=15000)
-                page.locator(".snapshot-frame").last.content_frame.locator(".day").first.wait_for()
-                page.wait_for_function("""() => [...document.querySelectorAll('.snapshot-frame')].every(f =>
-                    Math.abs(f.getBoundingClientRect().height-f.contentDocument.querySelector('.shell').getBoundingClientRect().height)<2)""")
+                request_snapshot(page, "give me my next week snapshot")
+                verify_snapshot_layers(page)
                 page.screenshot(path=str(OUT / "conversation.png"), full_page=True)
+                capture_calendar(page, 'snapshot-week.png')
                 week_start=date.today()+timedelta(days=7-date.today().weekday())
                 week_end=week_start+timedelta(days=6)
                 page.goto(base + "/snapshots?start="+week_start.isoformat()+"&end="+week_end.isoformat(), wait_until="networkidle")
@@ -119,7 +156,7 @@ def main():
                 assert page.locator('input,select').count()==0, "Calendars must be read-only"
                 assert page.locator('.day').count()==5
                 assert page.locator('.task').filter(has_text='Plan monthly review').locator('.task-category').all_text_contents()==['Operations','Projects']
-                page.locator('.shell').screenshot(path=str(OUT / "snapshot-week.png"))
+                assert page.locator('.day').first.locator('.task').count()==3, 'Show multiple tasks in one day'
                 month_start=week_start.replace(day=1)
                 following=(month_start.replace(year=month_start.year+1,month=1)
                            if month_start.month==12 else month_start.replace(month=month_start.month+1))
@@ -128,7 +165,6 @@ def main():
                 page.locator(".day").first.wait_for()
                 assert page.locator("#weekdays span").all_text_contents() == ["Mon", "Tue", "Wed", "Thu", "Fri"]
                 month_height=page.locator('.shell').bounding_box()['height']
-                page.locator('.shell').screenshot(path=str(OUT / "snapshot-month.png"))
                 page.goto(base + "/snapshots?start="+week_start.isoformat()+"&end="+week_end.isoformat(), wait_until="networkidle")
                 with page.expect_download() as download_info:
                     page.locator("#png").click()
@@ -141,6 +177,10 @@ def main():
                 page.locator('#details:not([hidden])').wait_for()
                 assert page.locator('#details input,#details textarea').count()==0
                 page.keyboard.press('Escape')
+                page.goto(base + '/', wait_until='networkidle')
+                request_snapshot(page, f'/snapshot {month_start.isoformat()} to {month_end.isoformat()}')
+                verify_snapshot_layers(page)
+                capture_calendar(page, 'snapshot-month.png')
                 page.goto(base + "/board", wait_until="networkidle")
                 page.locator(".task-row").first.wait_for()
                 assert page.locator('.task-row').count()==7, "Multi-category tasks must not create duplicate rows"
@@ -164,6 +204,7 @@ def main():
                 # Exercise the embedded calendar on a phone as well as desktop.
                 page.set_viewport_size({'width':390,'height':844})
                 page.goto(base+'/',wait_until='networkidle')
+                request_snapshot(page, 'give me my next week snapshot')
                 frame=page.locator('.snapshot-frame').last
                 frame.content_frame.locator('.task').first.wait_for()
                 page.wait_for_function("""() => [...document.querySelectorAll('.snapshot-frame')].every(f =>
@@ -173,7 +214,7 @@ def main():
                 composer=page.locator('#composer').bounding_box()
                 assert composer['y']+composer['height']<=845, 'The mobile message composer must stay visible'
                 page.screenshot(path=str(OUT/'conversation-mobile.png'),full_page=True)
-                frame.screenshot(path=str(OUT/'snapshot-mobile.png'))
+                capture_calendar(page, 'snapshot-mobile.png')
                 browser.close()
             print("Created:", ", ".join(p.name for p in sorted(OUT.glob("*.png"))))
         finally:

@@ -12,13 +12,13 @@ The screenshots below use example data, not anyone's personal tasks. They are ge
 
 **Calendar requested in chat (synthetic example data)**
 
-![Tend calendar snapshot in a compact Outlook-style weekday calendar](docs/screenshots/snapshot-week.png)
+![Tend week calendar inside a themed chat bubble, with transparent day cells and colored task blocks](docs/screenshots/snapshot-week.png)
 
 **Month calendar (weekends appear only when they contain tasks or activity)**
 
-![Tend month snapshot with category-colored task entries](docs/screenshots/snapshot-month.png)
+![Tend month calendar inside a themed chat bubble, with transparent day cells and colored task blocks](docs/screenshots/snapshot-month.png)
 
-The conversation view above also shows a real embedded snapshot generated from local task data—not an AI-created image. You can request it naturally with `give me my next week snapshot` or `/snapshot last month`.
+These calendars are generated from local task data and appear inside the assistant's themed chat bubble. Day cells have borders and transparent interiors; task blocks keep their category-colored backgrounds. You can request a calendar naturally with `give me my next week snapshot` or `/snapshot last month`.
 
 **On a phone**
 
