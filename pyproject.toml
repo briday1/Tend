@@ -22,7 +22,6 @@ dependencies = [
 
 [project.scripts]
 tether = "tend.cli:main"
-tend = "tend.cli:main"
 
 [project.gui-scripts]
 tether-desktop = "tend.native:main"
