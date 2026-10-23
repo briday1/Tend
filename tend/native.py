@@ -1,4 +1,4 @@
-"""Native Windows Tend window. Built into Tend.exe by install-desktop.ps1."""
+"""Native Windows Tether window. Built into Tether.exe by install-desktop.ps1."""
 import ctypes
 import io
 import os
@@ -7,7 +7,7 @@ import time
 from pathlib import Path
 
 def _existing_window():
-    hwnd=ctypes.windll.user32.FindWindowW(None,"Tend")
+    hwnd=ctypes.windll.user32.FindWindowW(None,"Tether")
     if hwnd:
         ctypes.windll.user32.ShowWindow(hwnd,9)
         ctypes.windll.user32.SetForegroundWindow(hwnd)
@@ -15,17 +15,23 @@ def _existing_window():
 
 def main():
     from tend import desktop
+    if sys.platform!="win32":
+        desktop.start_and_open(open_window=True)
+        try:
+            while True:time.sleep(2)
+        except KeyboardInterrupt:pass
+        return
     import webview
     import pystray
     from PIL import Image
     from tend.windows_icon import raster
 
-    ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("Tend.Desktop")
+    ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("Tether.Desktop")
     create=ctypes.windll.kernel32.CreateMutexW
     create.restype=ctypes.c_void_p
     create.argtypes=(ctypes.c_void_p,ctypes.c_int,ctypes.c_wchar_p)
-    mutex=create(None,False,"Local\\TendNativeDesktop")
-    if not mutex:raise RuntimeError("Could not create native Tend mutex")
+    mutex=create(None,False,"Local\\TetherNativeDesktop")
+    if not mutex:raise RuntimeError("Could not create native Tether mutex")
     if ctypes.windll.kernel32.GetLastError()==183:
         for _ in range(20):
             if _existing_window():break
@@ -39,11 +45,11 @@ def main():
     try:
         root=Path(sys.executable).resolve().parent.parent if getattr(sys,"frozen",False) else Path(__file__).resolve().parent.parent
         py=root/".venv"/"Scripts"/"python.exe"
-        if not py.is_file():
-            raise RuntimeError("Tend Python environment not found: "+str(py)+". Re-run install-desktop.ps1.")
+        if not py.is_file():py=Path(sys.executable)
+
         os.environ["TEND_SERVICE_PYTHON"]=str(py)
         supervisor=desktop.start_and_open(open_window=False)
-        window=webview.create_window("Tend",f"http://127.0.0.1:{desktop.port()}/",
+        window=webview.create_window("Tether",f"http://127.0.0.1:{desktop.port()}/",
               width=1180,height=780,min_size=(620,450),background_color="#f5f5f5",text_select=True)
         def on_close():
             if not exiting:
@@ -68,9 +74,9 @@ def main():
                     desktop.log("Native service shutdown failed: "+repr(exc))
             try:window.destroy()
             except Exception:pass
-        tray=pystray.Icon("Tend",Image.open(io.BytesIO(raster(256))).convert("RGBA"),"Tend",
-             pystray.Menu(pystray.MenuItem("Open Tend",reopen,default=True),
-                           pystray.MenuItem("Exit Tend",exit_app)))
+        tray=pystray.Icon("Tether",Image.open(io.BytesIO(raster(256))).convert("RGBA"),"Tether",
+             pystray.Menu(pystray.MenuItem("Open Tether",reopen,default=True),
+                           pystray.MenuItem("Exit Tether",exit_app)))
         tray.run_detached()
         webview.start(gui="edgechromium",debug=False)
     finally:
