@@ -80,7 +80,7 @@ def main():
                     page.route('**/*',route)
                 else:page.route('**/api/attention*',lambda route:route.fulfill(status=200,content_type='application/json',body='{"items":[]}'))
                 page.goto(base+'/',wait_until='networkidle')
-                expect(page.locator('.brand-word')).to_have_text('tether-chat.')
+                expect(page.locator('.brand-word')).to_have_text('tether.')
                 assert page.title()=='tether-chat'
                 assert page.locator('#chatCategories').count()==0
                 category=page.locator('#chat a.chat-reference').filter(has_text='Projects')
@@ -104,7 +104,7 @@ def main():
                 assert page.url==base+'/'
                 page.keyboard.press('Escape')
                 page.goto(base+'/board',wait_until='networkidle')
-                expect(page.locator('.brand-word')).to_have_text('tether-chat.')
+                expect(page.locator('.brand-word')).to_have_text('tether.')
                 page.locator('.task-row').filter(has_text='Prepare briefing').click()
                 expect(page.locator('.action-list-row')).to_have_count(2)
                 bounds=[page.locator(s).bounding_box() for s in ['.category-section','.task-section','.actions-section']]
