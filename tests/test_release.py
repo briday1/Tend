@@ -10,7 +10,7 @@ ROOT=Path(__file__).resolve().parents[1]
 
 
 def test_exact_public_commands_and_core_pillow():
-    project=tomllib.loads((ROOT/'pyproject.toml').read_text())['project']
+    project=tomllib.loads((ROOT/'pyproject.toml').read_text(encoding='utf-8'))['project']
     assert set(project['scripts'])=={'tether'}
     assert set(project['gui-scripts'])=={'tether-desktop'}
     assert any(s.lower().startswith('pillow') and ';' not in s for s in project['dependencies'])
@@ -21,10 +21,10 @@ def test_exact_public_commands_and_core_pillow():
 
 def test_header_brand_and_shared_drawer_styles():
     for name in ('index.html','board.html'):
-        page=(ROOT/'tend'/name).read_text()
+        page=(ROOT/'tend'/name).read_text(encoding='utf-8')
         assert '<span class="brand-word">tether<span>.</span></span>' in page
         assert '<span class="brand-word">tend' not in page
-    css=(ROOT/'tend/theme.css').read_text()
+    css=(ROOT/'tend/theme.css').read_text(encoding='utf-8')
     assert '.reference-drawer,.action-drawer{position:fixed;' in css
     assert '#board:has(.actions-section){grid-template-columns:' in css
     assert '.bubble.assistant a{color:var(--accent)!important}' in css
