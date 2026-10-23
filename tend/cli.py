@@ -1,4 +1,4 @@
-"""Start Tend's local browser and HTTP MCP servers with one command."""
+"""Start tether's local browser and HTTP MCP servers with one command."""
 import os
 import subprocess
 import sys
@@ -9,6 +9,7 @@ from urllib.error import URLError
 from . import store
 from . import storage
 from pathlib import Path
+from . import __version__
 
 def main():
     import argparse
@@ -35,7 +36,7 @@ def main():
     if args.port is not None:os.environ["TEND_WEB_PORT"]=str(args.port)
     if args.mcp_port is not None:os.environ["TEND_MCP_PORT"]=str(args.mcp_port)
     if args.no_browser:os.environ["TEND_NO_BROWSER"]="1"
-    # Reuse a running compatible Tend instance instead of attempting a duplicate.
+    # Reuse a running compatible tether instance instead of attempting a duplicate.
     import socket, json
     target_port=int(os.environ.get("TEND_WEB_PORT","8765"))
     with socket.socket() as probe:
@@ -45,14 +46,14 @@ def main():
         try:
             with urlopen(f"http://127.0.0.1:{target_port}/api/health",timeout=1.5) as response:
                 health=json.load(response)
-            if health.get("app")=="tend" and health.get("brand")=="tether" and health.get("streaming_chat") is True:
+            if health.get("app")=="tend" and health.get("brand")=="tether" and health.get("version")==__version__ and health.get("streaming_chat") is True:
                 if os.environ.get("TEND_NO_BROWSER")!="1":
                     webbrowser.open(f"http://127.0.0.1:{target_port}/")
                 print("Tether is already running; reused existing web server.",flush=True)
                 return
         except (OSError,ValueError,URLError):
             pass
-        raise SystemExit("Port "+str(target_port)+" is occupied by an outdated or different server. Stop the previous Tend server to load the new version. See README troubleshooting.")
+        raise SystemExit("Port "+str(target_port)+" is occupied by an outdated or different server. Stop the previous tether server to load the new version. See README troubleshooting.")
     store.init()
     storage.activate_pending()
     store.init()
@@ -83,20 +84,20 @@ def main():
         print(f"Tether browser: {url}",flush=True)
         print(f"Tether MCP: http://127.0.0.1:{mcp_port}/mcp",flush=True)
         print(f"Local database: {store.path()}",flush=True)
-        print("Press Ctrl+C to stop Tend when running in a terminal.",flush=True)
+        print("Press Ctrl+C to stop tether when running in a terminal.",flush=True)
         # Wait for a valid response instead of opening an unavailable page.
         deadline=time.monotonic()+20
         ready=False
         while time.monotonic()<deadline:
             if any(child.poll() is not None for child in children):
-                raise RuntimeError("Tend failed to start. See server output above.")
+                raise RuntimeError("tether failed to start. See server output above.")
             try:
                 with urlopen(url,timeout=0.8) as response:
                     ready=response.status==200
                 if ready:break
             except (URLError,OSError,TimeoutError):
                 time.sleep(.2)
-        if not ready:raise RuntimeError("Tend did not become ready on "+url)
+        if not ready:raise RuntimeError("tether did not become ready on "+url)
         if env.get("TEND_NO_BROWSER")!="1":
             webbrowser.open(url)
         while True:
@@ -108,16 +109,16 @@ def main():
                 now=time.monotonic()
                 times=[t for t in restart_history.get(name,[]) if now-t<120]
                 if len(times)>=3:
-                    raise RuntimeError(f"Tend {name} service repeatedly exited (last code {exit_code}); see {log_path}")
+                    raise RuntimeError(f"tether {name} service repeatedly exited (last code {exit_code}); see {log_path}")
                 times.append(now)
                 restart_history[name]=times
-                print(f"Tend {name} service exited (code {exit_code}); restarting ({len(times)}/3 within 2 minutes)",flush=True)
+                print(f"tether {name} service exited (code {exit_code}); restarting ({len(times)}/3 within 2 minutes)",flush=True)
                 with log_path.open("ab") as output:
                     children[index]=subprocess.Popen(commands[index],env=env,creationflags=flags,
                         stdin=subprocess.DEVNULL,stdout=output,stderr=subprocess.STDOUT,
                         close_fds=True)
             if storage.load().get("pending"):
-                print("Switching Tend database; restarting local services...",flush=True)
+                print("Switching tether database; restarting local services...",flush=True)
                 for child in children:
                     if child.poll() is None:child.terminate()
                 for child in children:
@@ -141,14 +142,14 @@ def main():
                 deadline=time.monotonic()+20
                 while time.monotonic()<deadline:
                     if any(child.poll() is not None for child in children):
-                        raise RuntimeError("Tend restart failed")
+                        raise RuntimeError("tether restart failed")
                     try:
                         with urlopen(url,timeout=.8) as response:
                             if response.status==200:break
                     except (URLError,OSError,TimeoutError):
                         time.sleep(.2)
-                else:raise RuntimeError("Tend web server did not restart")
-                print("Tend database active:",store.path(),flush=True)
+                else:raise RuntimeError("tether web server did not restart")
+                print("tether database active:",store.path(),flush=True)
             time.sleep(.4)
     except KeyboardInterrupt:
         pass
@@ -160,6 +161,6 @@ def main():
             try:
                 stop_process_tree(child.pid,log=lambda message:print(message,flush=True))
             except Exception as exc:
-                print("Tend shutdown warning:",str(exc),flush=True)
+                print("tether shutdown warning:",str(exc),flush=True)
 
 if __name__=="__main__":main()

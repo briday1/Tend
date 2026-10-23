@@ -6,6 +6,7 @@ import sys
 import time
 import webbrowser
 from pathlib import Path
+from . import __version__
 from urllib.request import urlopen
 from urllib.error import URLError
 
@@ -21,7 +22,7 @@ def healthy():
     try:
         with urlopen(f"http://127.0.0.1:{port()}/api/health",timeout=0.75) as response:
             data=json.load(response)
-            return response.status==200 and data.get("app")=="tend" and data.get("brand")=="tether" and data.get("streaming_chat") is True and data.get("tool_runner")=="unbounded-v2"
+            return response.status==200 and data.get("app")=="tend" and data.get("brand")=="tether" and data.get("version")==__version__ and data.get("streaming_chat") is True and data.get("tool_runner")=="unbounded-v2"
     except (OSError,ValueError,URLError):
         return False
 
@@ -111,7 +112,7 @@ def run_tray(server):
     tray_icon=Image.open(io.BytesIO(raster(256))).convert("RGBA")
     def reopen(icon,item):
         if not healthy():
-            show_error("Tether's web server is unavailable. Exit Tether and start it again from the desktop shortcut.")
+            show_error("Tether's web server is unavailable. Exit tether and start it again from the desktop shortcut.")
         else:
             open_app()
     def quit_tend(icon,item):
@@ -135,10 +136,10 @@ def run_tray(server):
         except Exception as exc:
             log("Unable to stop services cleanly: "+repr(exc))
     menu=pystray.Menu(
-        pystray.MenuItem("Open Tether",reopen,default=True),
-        pystray.MenuItem("Exit Tether" if server else "Exit Tether tray",quit_tend),
+        pystray.MenuItem("Open tether",reopen,default=True),
+        pystray.MenuItem("Exit tether" if server else "Exit tether tray",quit_tend),
     )
-    icon=pystray.Icon("tend",tray_icon,"Tether",menu)
+    icon=pystray.Icon("tend",tray_icon,"tether",menu)
     icon.run()
 
 if __name__=="__main__":

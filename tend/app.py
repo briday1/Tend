@@ -6,6 +6,7 @@ from fastapi.responses import FileResponse,Response
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from pydantic import BaseModel,Field
 from typing import Literal
+from . import __version__
 from . import store as db
 from . import ai
 from . import commands
@@ -64,11 +65,11 @@ def theme_css():return FileResponse(Path(__file__).with_name("theme.css"),media_
 @app.get("/theme.js")
 def theme_js():return FileResponse(Path(__file__).with_name("theme.js"),media_type="application/javascript")
 @app.get("/api/health")
-def health():return {"app":"tend","brand":"tether","status":"ok","streaming_chat":True,"board_categories":True,"tool_runner":"unbounded-v2"}
+def health():return {"app":"tend","brand":"tether","version":__version__,"status":"ok","streaming_chat":True,"board_categories":True,"tool_runner":"unbounded-v2"}
 @app.get("/manifest.webmanifest")
 def manifest():return FileResponse(Path(__file__).with_name("manifest.webmanifest"),media_type="application/manifest+json")
 @app.get("/")
-def home():return FileResponse(Path(__file__).with_name("index.html"))
+def home():return FileResponse(Path(__file__).with_name("index.html"),headers={"Cache-Control":"no-store"})
 @app.get("/snapshots")
 def snapshots_page():return FileResponse(Path(__file__).with_name("snapshot.html"))
 @app.get("/api/snapshot")
@@ -88,7 +89,7 @@ def snapshot_png(start:str,end:str,category:str="",theme:str="sage",scale:int=2)
         raise HTTPException(422,str(exc)) from None
 
 @app.get("/board")
-def board_page():return FileResponse(Path(__file__).with_name("board.html"))
+def board_page():return FileResponse(Path(__file__).with_name("board.html"),headers={"Cache-Control":"no-store"})
 @app.get("/api/snapshot.svg")
 def snapshot_svg(start:str,end:str,category:str="",theme:str="sage"):
     from .snapshot_export import svg
