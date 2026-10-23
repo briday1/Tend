@@ -16,10 +16,13 @@ def _existing_window():
 def main():
     from tend import desktop
     if sys.platform!="win32":
-        desktop.start_and_open(open_window=True)
+        server=desktop.start_and_open(open_window=True)
         try:
-            while True:time.sleep(2)
-        except KeyboardInterrupt:pass
+            desktop.run_tray(server)
+        except KeyboardInterrupt:
+            if server is not None and server.poll() is None:
+                from tend.shutdown import stop_process_tree
+                stop_process_tree(server.pid,log=desktop.log)
         return
     import webview
     import pystray
