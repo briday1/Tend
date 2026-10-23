@@ -13,6 +13,26 @@ def _existing_window():
         ctypes.windll.user32.SetForegroundWindow(hwnd)
     return bool(hwnd)
 
+
+def _apply_windows_window_icon():
+    """Set both Win32 icon sizes on the real pywebview HWND, not python.exe."""
+    import tempfile
+    from tend.windows_icon import create_icon
+    user32=ctypes.windll.user32
+    icon_file=Path(tempfile.gettempdir())/"tether-horizon-window.ico"
+    create_icon(icon_file)
+    user32.LoadImageW.restype=ctypes.c_void_p
+    user32.LoadImageW.argtypes=[ctypes.c_void_p,ctypes.c_wchar_p,ctypes.c_uint,ctypes.c_int,ctypes.c_int,ctypes.c_uint]
+    user32.SendMessageW.restype=ctypes.c_ssize_t
+    user32.SendMessageW.argtypes=[ctypes.c_void_p,ctypes.c_uint,ctypes.c_size_t,ctypes.c_ssize_t]
+    hwnd=user32.FindWindowW(None,"Tether")
+    if not hwnd:
+        desktop_error="Tether window was not found for icon assignment"
+        raise RuntimeError(desktop_error)
+    for size,index in ((16,0),(32,1)):
+        icon=user32.LoadImageW(None,str(icon_file),1,size,size,0x10)
+        if icon:user32.SendMessageW(hwnd,0x80,index,icon)
+
 def main():
     from tend import desktop
     if sys.platform!="win32":
@@ -59,6 +79,7 @@ def main():
                 window.hide()
                 return False
         window.events.closing+=on_close
+        window.events.shown+=_apply_windows_window_icon
 
         def reopen(icon,item):
             try:
