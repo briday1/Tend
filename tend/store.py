@@ -24,7 +24,10 @@ CREATE TABLE IF NOT EXISTS conversation(id TEXT PRIMARY KEY,role TEXT NOT NULL,b
 CREATE TABLE IF NOT EXISTS activity(id TEXT PRIMARY KEY,thread_id TEXT NOT NULL REFERENCES threads(id) ON DELETE CASCADE,kind TEXT NOT NULL,body TEXT NOT NULL,occurred_at TEXT NOT NULL,recorded_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS thread_categories(thread_id TEXT NOT NULL REFERENCES threads(id) ON DELETE CASCADE,name TEXT NOT NULL,position INTEGER NOT NULL,PRIMARY KEY(thread_id,name));
 """)
-        columns={row[1] for row in c.execute("PRAGMA table_info(threads)")}
+        entry_columns={row[1] for row in c.execute("PRAGMA table_info(entries)")}
+        for name in ("due_at","revisit_at","notified_for"):
+            if name not in entry_columns:c.execute(f"ALTER TABLE entries ADD COLUMN {name} TEXT")
+        columns={row[1] for row in c.execute("PRAGMA table_info(threads)") }
         if "category" not in columns:c.execute("ALTER TABLE threads ADD COLUMN category TEXT NOT NULL DEFAULT 'Unsorted'")
         if "notified_for" not in columns:c.execute("ALTER TABLE threads ADD COLUMN notified_for TEXT")
         if "due_at" not in columns:c.execute("ALTER TABLE threads ADD COLUMN due_at TEXT")
@@ -142,6 +145,32 @@ def add(id,kind,body):
         c.execute("INSERT INTO entries(id,thread_id,kind,body,created_at) VALUES(?,?,?,?,?)",(eid,id,kind,body.strip(),t))
         c.execute("UPDATE threads SET updated_at=? WHERE id=?",(t,id))
     return query("SELECT * FROM entries WHERE id=?",(eid,))[0]
+def update_action(id,fields):
+    """Update an individual action's dates or completion without changing its parent task."""
+    allowed={"due_at","revisit_at","done"}
+    fields={k:v for k,v in fields.items() if k in allowed}
+    if not fields:raise ValueError("No action fields")
+    for key in ("due_at","revisit_at"):
+        if key in fields and fields[key] is not None:
+            stamp=fields[key]
+            try:
+                dt=datetime.fromisoformat(stamp.replace("Z","+00:00"))
+                if dt.tzinfo is None:raise ValueError()
+            except (ValueError,AttributeError):raise ValueError("Action date needs a timezone-aware ISO datetime")
+    if "done" in fields:fields["done"]=int(bool(fields["done"]))
+    if "revisit_at" in fields:fields["notified_for"]=None
+    with conn() as c:
+        row=c.execute("SELECT thread_id FROM entries WHERE id=? AND kind='action'",(id,)).fetchone()
+        if not row:return None
+        c.execute("UPDATE entries SET "+",".join(k+"=?" for k in fields)+" WHERE id=?",(*fields.values(),id))
+        c.execute("UPDATE threads SET updated_at=? WHERE id=?",(now(),row["thread_id"]))
+    return query("SELECT * FROM entries WHERE id=?",(id,))[0]
+
+def find_action(task_id,text):
+    for e in query("SELECT * FROM entries WHERE thread_id=? AND kind='action'",(task_id,)):
+        if e["body"].strip().casefold()==text.strip().casefold():return e
+    return None
+
 def toggle(id,done):
     with conn() as c:c.execute("UPDATE entries SET done=? WHERE id=? AND kind='action'",(int(done),id))
     rows=query("SELECT * FROM entries WHERE id=?",(id,))
@@ -200,6 +229,18 @@ def claim_notifications():
                     except (ValueError,TypeError) as exc:notice["report_error"]=str(exc)
                 c.execute(f"UPDATE threads SET {claim_field}=? WHERE id=?",(stamp,item["id"]))
                 claimed.append(notice)
+        for row in c.execute("""SELECT e.id,e.thread_id,e.body,e.revisit_at,e.notified_for,t.title
+            FROM entries e JOIN threads t ON t.id=e.thread_id
+            WHERE e.kind='action' AND e.done=0 AND e.revisit_at IS NOT NULL
+            AND t.archived_at IS NULL AND t.state!='settled'""").fetchall():
+            stamp=row["revisit_at"]
+            if stamp==row["notified_for"]:continue
+            try:due=datetime.fromisoformat(stamp.replace("Z","+00:00"))
+            except ValueError:continue
+            if due.tzinfo is None or not (current-timedelta(hours=24)<=due<=current):continue
+            if len(claimed)>=3:break
+            claimed.append({"id":row["thread_id"],"action_id":row["id"],"title":row["body"],"task_title":row["title"],"revisit_at":stamp})
+            c.execute("UPDATE entries SET notified_for=? WHERE id=?",(stamp,row["id"]))
     return claimed
 
 def daily_brief():
