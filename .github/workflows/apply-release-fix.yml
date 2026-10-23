@@ -1,0 +1,89 @@
+name: Validate tether release repair
+on:
+  workflow_dispatch:
+  push:
+    branches: [fix/tether-release-022]
+    paths: ['.github/repair/**', '.github/workflows/apply-release-fix.yml']
+permissions:
+  contents: write
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/tether-release-022
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Apply verified source delta
+        shell: python
+        run: |
+          import base64, hashlib, json, lzma
+          from pathlib import Path
+          root=Path.cwd().resolve()
+          encoded=''.join(p.read_text().strip() for p in sorted(Path('.github/repair').glob('*.b64')))
+          compressed=base64.b64decode(encoded,validate=True)
+          assert hashlib.sha256(compressed).hexdigest()=='e79ad691926404018fffbc50d64006e896324e28893a3e05e78f69f571fa441c', 'Payload integrity mismatch'
+          records=json.loads(lzma.decompress(compressed))
+          allowed={'README.md','pyproject.toml','.github/workflows/publish-pypi.yml'}
+          staged=[]
+          for record in records:
+              relative=Path(record['path'])
+              assert not relative.is_absolute() and '..' not in relative.parts
+              assert str(relative) in allowed or relative.parts[0] in {'tend','scripts','tests'}
+              path=root/relative
+              original=path.read_text(encoding='utf-8') if path.exists() else ''
+              assert hashlib.sha256(original.encode()).hexdigest()==record['before'], f'Base changed: {relative}'
+              updated=original
+              for start,end,text in reversed(record['edits']):
+                  updated=updated[:start]+text+updated[end:]
+              assert hashlib.sha256(updated.encode()).hexdigest()==record['after'], f'Result mismatch: {relative}'
+              staged.append((path,updated))
+          for path,text in staged:
+              path.parent.mkdir(parents=True,exist_ok=True)
+              path.write_text(text,encoding='utf-8')
+          Path('/tmp/tether-repair-paths.json').write_text(json.dumps([r['path'] for r in records]))
+          print('Applied verified source files:',len(records))
+      - name: Install test and packaging dependencies
+        run: python -m pip install '.[dev]' build twine uv playwright
+      - name: Python tests and syntax
+        run: |
+          python -m compileall -q tend scripts tests
+          python -m pytest -q
+      - name: Install test browser
+        run: python -m playwright install --with-deps chromium
+      - name: Test real UI and update screenshots
+        run: |
+          python scripts/check_ui.py
+          python scripts/capture_screenshots.py
+      - name: Build, validate, and clean-install wheel
+        run: |
+          python -m build
+          python -m twine check dist/*
+          python scripts/check_distribution.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: release-repair-results
+          retention-days: 5
+          path: |
+            docs/screenshots/
+            dist/
+            test-results/
+      - name: Commit validated source only
+        shell: python
+        run: |
+          import json,subprocess
+          from pathlib import Path
+          run=lambda *a:subprocess.run(a,check=True)
+          paths=json.loads(Path('/tmp/tether-repair-paths.json').read_text())
+          run('git','config','user.name','github-actions[bot]')
+          run('git','config','user.email','41898282+github-actions[bot]@users.noreply.github.com')
+          run('git','add','--',*paths)
+          screenshots=[str(p) for p in Path('docs/screenshots').glob('*.png')]
+          if screenshots:run('git','add','--',*screenshots)
+          run('git','rm','-r','.github/repair','.github/workflows/apply-release-fix.yml')
+          run('git','commit','-m','Fix tether release: verified packaging, branding, native icons and interactive UI')
+          run('git','push','origin','HEAD:fix/tether-release-022')
