@@ -68,7 +68,7 @@ function matchReferences(node){
     const pos=remaining.toLocaleLowerCase().indexOf(ref.title.toLocaleLowerCase());
     if(pos<0||pos>index)continue;
     const before=pos?remaining[pos-1]:'',after=remaining[pos+ref.title.length]||'';
-    if((before&&/[\\p{L}\\p{N}]/u.test(before))||(after&&/[\\p{L}\\p{N}]/u.test(after)))continue;
+    if((before&&/[a-z0-9]/i.test(before))||(after&&/[a-z0-9]/i.test(after)))continue;
     if(pos<index){index=pos;best=ref}
    }
    if(!best)break;
@@ -188,10 +188,11 @@ async function processQueue(){
        heading.textContent='Completed';
        activity.removeChild(current);
        const answer=el('div','tend-answer');
-       if(event.answer_html){answer.innerHTML=event.answer_html;appendSnapshot(answer,event.answer_html)}
+       if(event.answer_html){answer.innerHTML=event.answer_html;appendSnapshot(answer,event.answer_html);matchReferences(answer)}
        else answer.textContent=event.answer;
        pending.replaceChildren(...(answer.classList.contains('snapshot-answer')?[answer]:[answer,activity]));
        finished=true;
+       refreshReferences().catch(console.warn);
      }else if(event.type==='error')throw Error(event.message);
      scrollChat();
    }
