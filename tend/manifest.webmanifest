@@ -1,6 +1,6 @@
 {
-  "name": "Tend",
-  "short_name": "Tend",
+  "name": "Tether",
+  "short_name": "Tether",
   "description": "Local-first personal assistant",
   "start_url": "/",
   "scope": "/",
