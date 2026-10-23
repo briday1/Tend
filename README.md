@@ -1,5 +1,7 @@
 # tether.
 
+[![PyPI version](https://img.shields.io/pypi/v/tether-chat)](https://pypi.org/project/tether-chat/)
+
 A local-first assistant for tasks, action items, and things worth remembering. Talk naturally; your work and conversation stay in a local SQLite database.
 
 ![tether-chat conversation](https://raw.githubusercontent.com/briday1/tether-chat/main/docs/screenshots/conversation.png)
@@ -8,7 +10,7 @@ A local-first assistant for tasks, action items, and things worth remembering. T
 
 Requires Python 3.11 or newer. No PyInstaller build or separate Windows `.exe` installer is required.
 
-Install the desktop app from PyPI:
+Install the desktop app from [PyPI](https://pypi.org/project/tether-chat/):
 
 ```sh
 uv tool install --reinstall "tether-chat[desktop]"
