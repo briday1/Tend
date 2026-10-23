@@ -16,9 +16,9 @@
 .tend-activity-details{margin-top:6px}
 .tend-activity-details summary{cursor:pointer;color:var(--muted);font-size:12px}
 .tend-activity-log{display:grid;gap:5px;margin-top:8px;padding-left:8px;border-left:2px solid var(--line)}
-</style><style>.retry-error{font-size:13px;color:var(--muted);flex:1;min-width:0}.bubble.assistant:has(.retry-icon){display:flex;align-items:center;gap:10px}.retry-icon{display:inline-flex;justify-content:center;align-items:center;flex:0 0 30px;width:30px;height:30px;padding:0;border:1px solid var(--line);border-radius:50%;background:var(--panel);color:var(--text);cursor:pointer}.retry-icon:hover{background:var(--soft)}.retry-icon:focus-visible{outline:2px solid var(--accent);outline-offset:2px}.retry-icon.retrying svg{animation:tend-retry-spin .9s linear infinite}@keyframes tend-retry-spin{to{transform:rotate(360deg)}}@media(prefers-reduced-motion:reduce){.retry-icon.retrying svg{animation:none}}</style></head><body><header class="topnav"><div class="brand"><svg class="tend-mark" viewBox="0 0 64 64" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><defs><clipPath id="tend-circle"><circle cx="32" cy="32" r="30"/></clipPath></defs><g clip-path="url(#tend-circle)"><rect x="2" y="2" width="60" height="60" fill="var(--soft)"/><path d="M2 31Q21 23 34 31T62 29V62H2Z" fill="var(--muted)"/><path d="M2 39Q23 29 35 39T62 36V62H2Z" fill="var(--accent)" opacity=".65"/><path d="M2 49Q28 38 42 47T62 42V62H2Z" fill="var(--accent)"/></g></svg><span class="brand-word">tether<span>.</span></span></div><a href="/" class="active">Conversation</a><a href="/board">Tasks</a><div class="grow"></div><button id="navsettings" type="button" class="settings-gear" aria-label="Settings" title="Settings"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 2h4l.6 2.3 1.7.9 2.2-.7 2 3.5-1.7 1.7v2l1.7 1.7-2 3.5-2.2-.7-1.7.9L14 20h-4l-.6-2.3-1.7-.9-2.2.7-2-3.5L5.2 12v-2L3.5 8.3l2-3.5 2.2.7 1.7-.9z"/><circle cx="12" cy="11" r="3"/></svg></button></header><div class="app"><section class="main"><div class="chat" id="chat"><div class="welcome"><h1>What's on your mind?</h1><p>Put something down, ask what you're tracking, or pick up where you left off.</p></div></div><form class="composer" id="composer"><div class="command-anchor"><div id="command-menu" class="command-menu hidden" role="listbox" aria-label="Commands"></div><div class="sendrow"><textarea id="message" placeholder="Say anything…" aria-label="Message Tether" rows="1" required></textarea><button class="primary" id="send">Send</button></div></div><div class="sub">Enter to send · Shift+Enter for new line</div></form><div class="settings-backdrop hidden" id="settingsBackdrop"></div><div class="settings hidden" id="settings" role="dialog" aria-modal="true" aria-label="Settings"><div class="settings-header"><h1>Settings</h1><button class="secondary" type="button" id="closeSettings" aria-label="Close settings">✕</button></div><h2>Appearance</h2><label for="settingsTheme">Color theme</label><select id="settingsTheme" class="theme-picker" data-theme-picker aria-label="Color theme"></select><h2>AI connection</h2><p>Use your own API key and a tool-calling compatible model. Credentials are stored by the local server, never in your browser's storage.</p><form id="provider"><label for="base">Provider API base URL</label><input id="base" type="url" required placeholder="https://api.openai.com/v1"><label for="model">Model</label><input id="model" required placeholder="gpt-4.1-mini"><label for="key">API key</label><input id="key" type="password" autocomplete="off" placeholder="Leave blank to retain saved key"><div id="keyStatus" class="status"></div><button class="primary">Save connection</button><div id="providerStatus" class="status" role="status"></div><button type="button" class="secondary" id="testConnection">Test connection</button></form><h2>Database location</h2><p>Choose where Tether keeps its SQLite database. Moving copies and verifies your data, switches the running services, and retains the previous file as a backup.</p><form id="storageForm"><div class="storage-choices"><label><input type="radio" name="databaseMode" value="move" checked> Move current database</label><label><input type="radio" name="databaseMode" value="existing"> Use an existing Tether database</label></div><label for="databasePath">Destination folder or database file</label><div class="storage-path-row"><input id="databasePath" type="text" required spellcheck="false" placeholder="Choose a folder or enter a path"><button class="secondary" id="browseDatabase" type="button">Browse…</button></div><button class="primary" id="applyDatabase" type="submit">Move database</button><div id="storageStatus" class="status" role="status"></div></form><h2>Local data</h2><p>Your conversation and tasks are in SQLite and remain after browser cache is cleared. Keep an offline backup too.</p><a href="/api/backup" download="tend-backup.sqlite3">Download SQLite backup</a></div></section><aside class="right" id="right"><div style="display:flex;justify-content:space-between;align-items:center;gap:6px"><h2>Attention</h2><button id="refreshAttention" class="nav" title="Reconsider what deserves attention" type="button">↻</button></div><div id="due"><p class="muted">Reviewing…</p></div></aside><div id="referenceBackdrop" class="reference-backdrop hidden"></div><aside id="chatSelection" class="reference-drawer hidden" aria-live="polite"></aside></div><script>
+</style><style>.retry-error{font-size:13px;color:var(--muted);flex:1;min-width:0}.bubble.assistant:has(.retry-icon){display:flex;align-items:center;gap:10px}.retry-icon{display:inline-flex;justify-content:center;align-items:center;flex:0 0 30px;width:30px;height:30px;padding:0;border:1px solid var(--line);border-radius:50%;background:var(--panel);color:var(--text);cursor:pointer}.retry-icon:hover{background:var(--soft)}.retry-icon:focus-visible{outline:2px solid var(--accent);outline-offset:2px}.retry-icon.retrying svg{animation:tend-retry-spin .9s linear infinite}@keyframes tend-retry-spin{to{transform:rotate(360deg)}}@media(prefers-reduced-motion:reduce){.retry-icon.retrying svg{animation:none}}</style><script src="/action-notes.js"></script></head><body><header class="topnav"><div class="brand"><svg class="tend-mark" viewBox="0 0 64 64" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><defs><clipPath id="tend-circle"><circle cx="32" cy="32" r="30"/></clipPath></defs><g clip-path="url(#tend-circle)"><rect x="2" y="2" width="60" height="60" fill="var(--soft)"/><path d="M2 31Q21 23 34 31T62 29V62H2Z" fill="var(--muted)"/><path d="M2 39Q23 29 35 39T62 36V62H2Z" fill="var(--accent)" opacity=".65"/><path d="M2 49Q28 38 42 47T62 42V62H2Z" fill="var(--accent)"/></g></svg><span class="brand-word">tether<span>.</span></span></div><a href="/" class="active">Conversation</a><a href="/board">Tasks</a><div class="grow"></div><button id="navsettings" type="button" class="settings-gear" aria-label="Settings" title="Settings"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 2h4l.6 2.3 1.7.9 2.2-.7 2 3.5-1.7 1.7v2l1.7 1.7-2 3.5-2.2-.7-1.7.9L14 20h-4l-.6-2.3-1.7-.9-2.2.7-2-3.5L5.2 12v-2L3.5 8.3l2-3.5 2.2.7 1.7-.9z"/><circle cx="12" cy="11" r="3"/></svg></button></header><div class="app"><section class="main"><div class="chat" id="chat"><div class="welcome"><h1>What's on your mind?</h1><p>Put something down, ask what you're tracking, or pick up where you left off.</p></div></div><form class="composer" id="composer"><div class="command-anchor"><div id="command-menu" class="command-menu hidden" role="listbox" aria-label="Commands"></div><div class="sendrow"><textarea id="message" placeholder="Say anything…" aria-label="Message Tether" rows="1" required></textarea><button class="primary" id="send">Send</button></div></div><div class="sub">Enter to send · Shift+Enter for new line</div></form><div class="settings-backdrop hidden" id="settingsBackdrop"></div><div class="settings hidden" id="settings" role="dialog" aria-modal="true" aria-label="Settings"><div class="settings-header"><h1>Settings</h1><button class="secondary" type="button" id="closeSettings" aria-label="Close settings">✕</button></div><h2>Appearance</h2><label for="settingsTheme">Color theme</label><select id="settingsTheme" class="theme-picker" data-theme-picker aria-label="Color theme"></select><h2>AI connection</h2><p>Use your own API key and a tool-calling compatible model. Credentials are stored by the local server, never in your browser's storage.</p><form id="provider"><label for="base">Provider API base URL</label><input id="base" type="url" required placeholder="https://api.openai.com/v1"><label for="model">Model</label><input id="model" required placeholder="gpt-4.1-mini"><label for="key">API key</label><input id="key" type="password" autocomplete="off" placeholder="Leave blank to retain saved key"><div id="keyStatus" class="status"></div><button class="primary">Save connection</button><div id="providerStatus" class="status" role="status"></div><button type="button" class="secondary" id="testConnection">Test connection</button></form><h2>Database location</h2><p>Choose where Tether keeps its SQLite database. Moving copies and verifies your data, switches the running services, and retains the previous file as a backup.</p><form id="storageForm"><div class="storage-choices"><label><input type="radio" name="databaseMode" value="move" checked> Move current database</label><label><input type="radio" name="databaseMode" value="existing"> Use an existing Tether database</label></div><label for="databasePath">Destination folder or database file</label><div class="storage-path-row"><input id="databasePath" type="text" required spellcheck="false" placeholder="Choose a folder or enter a path"><button class="secondary" id="browseDatabase" type="button">Browse…</button></div><button class="primary" id="applyDatabase" type="submit">Move database</button><div id="storageStatus" class="status" role="status"></div></form><h2>Local data</h2><p>Your conversation and tasks are in SQLite and remain after browser cache is cleared. Keep an offline backup too.</p><a href="/api/backup" download="tend-backup.sqlite3">Download SQLite backup</a></div></section><aside class="right" id="right"><div style="display:flex;justify-content:space-between;align-items:center;gap:6px"><h2>Attention</h2><button id="refreshAttention" class="nav" title="Reconsider what deserves attention" type="button">↻</button></div><div id="due"><p class="muted">Reviewing…</p></div></aside><div id="referenceBackdrop" class="reference-backdrop hidden"></div><aside id="chatSelection" class="reference-drawer hidden" aria-live="polite"></aside></div><script>
 const COMMANDS=[{name:'/snapshot',description:'Beautiful calendar snapshot of any date range'},{name:'/help',description:'All commands'},{name:'/brief',description:'Daily brief'},{name:'/due',description:'Due reminders'},{name:'/waiting',description:'Blocked or waiting'},{name:'/recent',description:'Recently updated'}];
-const $=s=>document.querySelector(s);let mode='chat',busy=false;const outbound=[];
+const $=s=>document.querySelector(s);let mode='chat';
 function el(tag,cls,text){let node=document.createElement(tag);if(cls)node.className=cls;if(text!==undefined)node.textContent=text;return node}
 async function api(path,method='GET',data){let response=await fetch('/api'+path,{method,headers:{'Content-Type':'application/json'},body:data===undefined?undefined:JSON.stringify(data)});if(!response.ok){let x=await response.json().catch(()=>({}));throw Error(typeof x.detail==='string'?x.detail:'Request failed ('+response.status+')')}return response.json()}
 function scrollChat(){const area=$('#chat');requestAnimationFrame(()=>requestAnimationFrame(()=>{area.scrollTop=area.scrollHeight}))}
@@ -121,7 +121,7 @@ async function browseReference(ref){
     const save=el('button','primary','Save changes');save.type='submit';const status=el('p','reference-error');status.setAttribute('role','status');form.append(save,status);
     form.onsubmit=async e=>{e.preventDefault();save.disabled=true;const fields={done:done.checked};for(const key of ['due_at','revisit_at'])fields[key]=form.elements[key].value?new Date(form.elements[key].value).toISOString():null;
      try{await api('/actions/'+encodeURIComponent(action.id),'PATCH',fields);if(request===referenceRequest)status.textContent='Saved.';refreshReferences()}catch(error){if(request===referenceRequest)status.textContent=error.message}finally{save.disabled=false}
-    };content.append(form);
+    };content.append(form);window.tetherActionNotes(content,action.id,action.notes||[]);
    }
   }
   const link=el('a','browse-open','Open in Tasks ↗');link.href=referenceHref(ref);content.append(link);
@@ -135,26 +135,6 @@ document.addEventListener('keydown',event=>{
 });
 async function refreshReferences(){try{mentionData=await api('/mentions');document.querySelectorAll('.bubble.assistant').forEach(matchReferences)}catch(e){console.warn('Could not refresh task references',e)}}
 function bubble(role,text,html){let node=el('div','bubble '+(role==='user'?'user':'assistant'),text);if(role==='assistant'&&html){node.innerHTML=html;appendSnapshot(node,html);matchReferences(node)}$('#chat').append(node);scrollChat()}
-async function history(){
- const chat=$('#chat');
- const loading=el('p','hint','Loading conversation…');
- chat.replaceChildren(loading);
- const controller=new AbortController();
- const timer=setTimeout(()=>controller.abort(),10000);
- try{
-  const response=await fetch('/api/conversation/rendered',{signal:controller.signal});
-  if(!response.ok)throw Error('HTTP '+response.status);
-  const rows=await response.json();
-  if(chat.firstChild!==loading)return;
-  chat.replaceChildren();
-  if(!rows.length){let intro=el('div','welcome');intro.append(el('h1','',"What's on your mind?"),el('p','','Put something down, ask what you’re tracking, or pick up where you left off.'));chat.append(intro)}
-  else rows.forEach(x=>bubble(x.role,x.body,x.html));
-  scrollChat();
- }catch(err){
-  if(chat.firstChild===loading)loading.textContent=err.name==='AbortError'?'Conversation loading timed out. Check the Tether server or database.':'Could not load conversation: '+err.message;
- }finally{clearTimeout(timer)}
-}
-async function reminders(force=false){let target=$('#due');let data=await api('/attention'+(force?'?force=true':''));target.replaceChildren();let items=data.items||[];if(!items.length){target.append(el('p','muted','Nothing needs attention right now.'));return}for(let item of items){let node=el('div','item');node.append(el('strong','',item.title),el('small','',item.reason));node.onclick=()=>browseReference({type:'task',id:item.id});target.append(node)}}
 function show(next){const open=next==='settings';mode=open?'settings':'chat';$('#settings').classList.toggle('hidden',!open);$('#settingsBackdrop').classList.toggle('hidden',!open);$('#navsettings').classList.toggle('active',open);document.body.classList.toggle('settings-open',open);if(open){loadSettings();loadStorage();$('#closeSettings').focus()}else{$('#navsettings').focus()}}
 $('#settingsBackdrop').onclick=()=>show('chat');
 $('#closeSettings').onclick=()=>show('chat');
@@ -165,98 +145,9 @@ function showCommands(force=false){const menu=$('#command-menu');const matches=f
 function chooseCommand(cmd){$('#message').value=cmd.name;$('#command-menu').classList.add('hidden');$('#message').focus()}
 
 $('#navsettings').onclick=()=>show(mode==='settings'?'chat':'settings');
-$('#refreshAttention').onclick=()=>reminders(true).catch(console.error);
+
 $('#message').addEventListener('input',()=>{commandIndex=0;showCommands()});
 $('#message').addEventListener('keydown',e=>{const menu=$('#command-menu');if(!menu.classList.contains('hidden')){const options=commandMatches();if((e.key==='ArrowDown'||e.key==='ArrowUp')&&options.length){e.preventDefault();commandIndex=(commandIndex+(e.key==='ArrowDown'?1:-1)+options.length)%options.length;showCommands();return}if(e.key==='Escape'){menu.classList.add('hidden');return}if((e.key==='Tab'||e.key==='Enter')&&options.length){e.preventDefault();chooseCommand(options[commandIndex]);return}}if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();$('#composer').requestSubmit()}});
-async function processQueue(){
- if(busy||!outbound.length)return;
- busy=true;
- while(outbound.length){
-  const job=outbound[0];
-  const pending=job.pending;
-  pending.textContent='Thinking…';
-  try{
-   const response=await fetch('/api/chat/stream',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:job.text})});
-   if(!response.ok)throw Error(response.status===404?'Tether is connected to an older server without streaming chat. Close the old Tether Python processes and relaunch Tether.':'Connection failed (HTTP '+response.status+')');
-   if(!response.body)throw Error('Streaming not supported by this browser');
-   const reader=response.body.getReader(),decoder=new TextDecoder();
-   let buffer='',finished=false,steps=[];
-   const activity=el('div','tend-activity');
-   const heading=el('div','tend-activity-heading','Working on your request');
-   const current=el('div','tend-activity-current','Connecting…');
-   const details=el('details','tend-activity-details');
-   const summary=el('summary','','Show activity');
-   const log=el('div','tend-activity-log');
-   details.append(summary,log);activity.append(heading,current,details);
-   pending.replaceChildren(activity);
-   function consume(line){
-     if(!line.trim())return;
-     const event=JSON.parse(line);
-     if(event.type==='status'){
-       steps.push(event.message);
-       current.textContent=event.message;
-       const line=el('div','',event.message);
-       log.append(line);
-       summary.textContent='Show activity ('+steps.length+')';
-     }else if(event.type==='done'){
-       current.textContent='Completed';
-       heading.textContent='Completed';
-       activity.removeChild(current);
-       const answer=el('div','tend-answer');
-       if(event.answer_html){answer.innerHTML=event.answer_html;appendSnapshot(answer,event.answer_html);matchReferences(answer)}
-       else answer.textContent=event.answer;
-       pending.replaceChildren(...(answer.classList.contains('snapshot-answer')?[answer]:[answer,activity]));
-       finished=true;
-       refreshReferences().catch(console.warn);
-     }else if(event.type==='error')throw Error(event.message);
-     scrollChat();
-   }
-   while(true){
-     const {value,done}=await reader.read();
-     if(done)break;
-     buffer+=decoder.decode(value,{stream:true});
-     const lines=buffer.split('\n');buffer=lines.pop();
-     for(const line of lines)consume(line);
-   }
-   if(buffer.trim())consume(buffer);
-   if(!finished)throw Error('Connection ended before a response was received');
-   outbound.shift();
-   scrollChat();
-   // Attention is independent and must never block the next queued message.
-   reminders().catch(()=>{});
-  }catch(err){
-   pending.replaceChildren();
-   const failure=el('div','retry-error',err.message+' · Message not confirmed as saved');
-   const retry=el('button','retry-icon');
-   retry.type='button';
-   retry.title='Retry sending message';
-   retry.setAttribute('aria-label','Retry sending message');
-   retry.innerHTML='<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.2 5.5"/><path d="M20 4v7h-7"/></svg>';
-   retry.onclick=()=>{retry.disabled=true;retry.classList.add('retrying');outbound.unshift(job);processQueue()};
-   pending.append(failure,retry);
-   outbound.shift();
-   break;
-  }
- }
- busy=false;
- scrollChat();
- if(outbound.length)processQueue();
-}
-$('#composer').onsubmit=e=>{
- e.preventDefault();
- const text=$('#message').value.trim();
- if(!text)return;
- $('#command-menu').classList.add('hidden');
- $('#message').value='';
- if($('#chat').querySelector('.welcome'))$('#chat').replaceChildren();
- bubble('user',text);
- const pending=el('div','bubble assistant',busy?'Queued…':'Thinking…');
- $('#chat').append(pending);
- outbound.push({text,pending});
- scrollChat();
- $('#message').focus();
- processQueue();
-};
 async function loadSettings(){try{let c=await api('/settings');$('#base').value=c.base_url;$('#model').value=c.model;$('#key').value='';$('#keyStatus').textContent=c.has_key?'A key is already configured. Leave blank to keep it.':'No API key configured.'}catch(e){$('#providerStatus').textContent=e.message}}
 $('#testConnection').onclick=async()=>{const button=$('#testConnection');button.disabled=true;$('#providerStatus').textContent='Testing provider…';try{const result=await api('/settings/test','POST',{});$('#providerStatus').textContent=result.message}catch(err){$('#providerStatus').textContent=err.message}finally{button.disabled=false}};
 $('#provider').onsubmit=async e=>{e.preventDefault();try{let result=await api('/settings','POST',{base_url:$('#base').value.trim(),model:$('#model').value.trim(),api_key:$('#key').value.trim()||null});$('#key').value='';$('#providerStatus').textContent='Saved on this computer.';$('#keyStatus').textContent=result.has_key?'API key configured.':''}catch(err){$('#providerStatus').textContent=err.message}};
@@ -265,5 +156,4 @@ function databaseMode(){return document.querySelector('input[name="databaseMode"
 document.querySelectorAll('input[name="databaseMode"]').forEach(input=>input.onchange=()=>{$('#applyDatabase').textContent=databaseMode()==='move'?'Move database':'Use existing database';$('#databasePath').value=''});
 $('#browseDatabase').onclick=async()=>{const button=$('#browseDatabase');button.disabled=true;$('#storageStatus').textContent='Opening folder chooser on this computer…';try{if(databaseMode()==='existing'){$('#storageStatus').textContent='For an existing database, enter its full .sqlite3 file path.';return}const answer=await api('/storage/choose-folder','POST',{});if(answer.folder){$('#databasePath').value=answer.folder;$('#storageStatus').textContent='Selected folder: '+answer.folder}else{$('#storageStatus').textContent='Selection cancelled.'}}catch(err){$('#storageStatus').textContent=err.message}finally{button.disabled=false}};
 $('#storageForm').onsubmit=async e=>{e.preventDefault();const button=$('#applyDatabase');button.disabled=true;try{const result=await api('/storage','POST',{path:$('#databasePath').value.trim(),mode:databaseMode()});$('#storageStatus').textContent='Switching database and restarting Tether services…';const expected=result.pending;let attempts=0;const check=async()=>{try{const info=await api('/storage');if(!info.pending&&info.current===expected){$('#storageStatus').textContent='Database location updated: '+info.current;button.disabled=false;return}}catch(err){}if(++attempts<80)setTimeout(check,500);else{$('#storageStatus').textContent='Could not confirm the switch. Check the Tether terminal; the original database is retained.';button.disabled=false}};setTimeout(check,900)}catch(err){$('#storageStatus').textContent=err.message;button.disabled=false}};
-refreshReferences();history().then(()=>{const d=new URLSearchParams(location.search).get('discuss');if(d){$('#message').value=d;$('#message').focus()}}).catch(err=>bubble('assistant',err.message));reminders().catch(console.error);
-</script></body></html>
+</script><script src="/chat.js"></script></body></html>

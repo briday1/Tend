@@ -19,6 +19,8 @@ def init():
         c.executescript("""
 CREATE TABLE IF NOT EXISTS threads(id TEXT PRIMARY KEY,title TEXT NOT NULL,summary TEXT NOT NULL DEFAULT '',state TEXT NOT NULL DEFAULT 'open',revisit_at TEXT,created_at TEXT NOT NULL,updated_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS entries(id TEXT PRIMARY KEY,thread_id TEXT NOT NULL REFERENCES threads(id) ON DELETE CASCADE,kind TEXT NOT NULL,body TEXT NOT NULL,done INTEGER NOT NULL DEFAULT 0,created_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS action_notes(id TEXT PRIMARY KEY,action_id TEXT NOT NULL REFERENCES entries(id) ON DELETE CASCADE,body TEXT NOT NULL,created_at TEXT NOT NULL,updated_at TEXT NOT NULL);
+CREATE INDEX IF NOT EXISTS action_notes_action ON action_notes(action_id);
 CREATE TABLE IF NOT EXISTS relations(a TEXT NOT NULL REFERENCES threads(id) ON DELETE CASCADE,b TEXT NOT NULL REFERENCES threads(id) ON DELETE CASCADE,PRIMARY KEY(a,b));
 CREATE TABLE IF NOT EXISTS conversation(id TEXT PRIMARY KEY,role TEXT NOT NULL,body TEXT NOT NULL,created_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS activity(id TEXT PRIMARY KEY,thread_id TEXT NOT NULL REFERENCES threads(id) ON DELETE CASCADE,kind TEXT NOT NULL,body TEXT NOT NULL,occurred_at TEXT NOT NULL,recorded_at TEXT NOT NULL);
@@ -66,11 +68,16 @@ def get(id):
     rows=with_categories(query("SELECT * FROM threads WHERE id=?",(id,)))
     if not rows:return None
     t=rows[0];t["action_config"]=json.loads(t["action_config"] or "{}");t["entries"]=query("SELECT * FROM entries WHERE thread_id=? ORDER BY created_at,id",(id,))
+    notes={}
+    for note in query("SELECT n.* FROM action_notes n JOIN entries e ON e.id=n.action_id WHERE e.thread_id=? ORDER BY n.created_at,n.id",(id,)):
+        notes.setdefault(note["action_id"],[]).append(note)
+    for entry in t["entries"]:
+        if entry["kind"]=="action":entry["notes"]=notes.get(entry["id"],[])
     t["activity"]=query("SELECT * FROM activity WHERE thread_id=? ORDER BY occurred_at DESC,recorded_at DESC",(id,))
     t["related"]=query("SELECT t.id,t.title FROM relations r JOIN threads t ON t.id=CASE WHEN r.a=? THEN r.b ELSE r.a END WHERE r.a=? OR r.b=?",(id,id,id))
     return t
 def list_threads(q=""):
-    rows=with_categories(query("SELECT t.*,(SELECT COUNT(*) FROM entries e WHERE e.thread_id=t.id) entry_count FROM threads t WHERE title LIKE ? OR summary LIKE ? OR EXISTS(SELECT 1 FROM entries e WHERE e.thread_id=t.id AND e.body LIKE ?) OR EXISTS(SELECT 1 FROM thread_categories tc WHERE tc.thread_id=t.id AND tc.name LIKE ?) ORDER BY updated_at DESC",("%"+q+"%",)*4))
+    rows=with_categories(query("SELECT t.*,(SELECT COUNT(*) FROM entries e WHERE e.thread_id=t.id) entry_count FROM threads t WHERE title LIKE ? OR summary LIKE ? OR EXISTS(SELECT 1 FROM entries e WHERE e.thread_id=t.id AND e.body LIKE ?) OR EXISTS(SELECT 1 FROM thread_categories tc WHERE tc.thread_id=t.id AND tc.name LIKE ?) OR EXISTS(SELECT 1 FROM action_notes n JOIN entries e ON e.id=n.action_id WHERE e.thread_id=t.id AND n.body LIKE ?) ORDER BY updated_at DESC",("%"+q+"%",)*5))
     for t in rows:
         t["attention_due"]=bool(t["revisit_at"] and t["revisit_at"]<=now() and t["state"]!="settled" and not t.get("archived_at"))
         t["deadline_due"]=bool(t.get("due_at") and t["due_at"][:10]<=now()[:10] and t["state"]!="settled")
@@ -354,3 +361,52 @@ def archive_thread(thread_id,archive=True):
 
 def archived_threads(q=""):
     return [t for t in list_threads(q) if t.get("archived_at")]
+
+
+def action_notes(action_id):
+    """Return notes for one real action; None distinguishes a missing action."""
+    if not query("SELECT id FROM entries WHERE id=? AND kind='action'",(action_id,)):return None
+    return query("SELECT * FROM action_notes WHERE action_id=? ORDER BY created_at,id",(action_id,))
+
+
+def _note_body(body):
+    if not isinstance(body,str) or not body.strip() or len(body)>20000:
+        raise ValueError("A note must contain 1 to 20000 characters")
+    return body.strip()
+
+
+def add_action_note(action_id,body,note_id=None):
+    """Attach a note to one action, not to the parent task or its siblings."""
+    body=_note_body(body)
+    note_id=note_id or uuid4().hex
+    if not isinstance(note_id,str) or not 8<=len(note_id)<=100 or not all(ch.isalnum() or ch in '-_' for ch in note_id):
+        raise ValueError("Invalid note ID")
+    with conn() as c:
+        c.execute("BEGIN IMMEDIATE")
+        parent=c.execute("SELECT thread_id FROM entries WHERE id=? AND kind='action'",(action_id,)).fetchone()
+        if not parent:return None
+        existing=c.execute("SELECT * FROM action_notes WHERE id=?",(note_id,)).fetchone()
+        if existing:
+            if existing['action_id']!=action_id or existing['body']!=body:raise ValueError("Note ID already belongs to different content")
+            return dict(existing)
+        stamp=now()
+        c.execute("INSERT INTO action_notes VALUES(?,?,?,?,?)",(note_id,action_id,body,stamp,stamp))
+        c.execute("UPDATE threads SET updated_at=? WHERE id=?",(stamp,parent['thread_id']))
+        return dict(c.execute("SELECT * FROM action_notes WHERE id=?",(note_id,)).fetchone())
+
+
+def update_action_note(action_id,note_id,body):
+    body=_note_body(body)
+    with conn() as c:
+        c.execute("BEGIN IMMEDIATE")
+        changed=c.execute("UPDATE action_notes SET body=?,updated_at=? WHERE id=? AND action_id=?",(body,now(),note_id,action_id)).rowcount
+        if not changed:return None
+        c.execute("UPDATE threads SET updated_at=? WHERE id=(SELECT thread_id FROM entries WHERE id=?)",(now(),action_id))
+        return dict(c.execute("SELECT * FROM action_notes WHERE id=?",(note_id,)).fetchone())
+
+
+def delete_action_note(action_id,note_id):
+    with conn() as c:
+        changed=c.execute("DELETE FROM action_notes WHERE id=? AND action_id=?",(note_id,action_id)).rowcount
+        if changed:c.execute("UPDATE threads SET updated_at=? WHERE id=(SELECT thread_id FROM entries WHERE id=?)",(now(),action_id))
+    return bool(changed)

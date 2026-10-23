@@ -73,6 +73,25 @@ def add_action_item(task_id:str,text:str,due_at:str="",bring_to_attention_at:str
     if due_at or bring_to_attention_at:entry=db.update_action(entry["id"],fields)
     return {"action":entry,"already_exists":False}
 @mcp.tool()
+def get_action_notes(action_id:str)->list[dict]|dict:
+    """Read the notes attached only to the chosen action item."""
+    notes=db.action_notes(action_id)
+    return notes if notes is not None else {"error":"Action not found"}
+@mcp.tool()
+def add_action_note(action_id:str,text:str)->dict:
+    """Save feedback or context under one action item; never attaches it to siblings or the task."""
+    try:return db.add_action_note(action_id,text) or {"error":"Action not found"}
+    except ValueError as exc:return {"error":str(exc)}
+@mcp.tool()
+def edit_action_note(action_id:str,note_id:str,text:str)->dict:
+    """Edit an existing note belonging to the specified action."""
+    try:return db.update_action_note(action_id,note_id,text) or {"error":"Note not found"}
+    except ValueError as exc:return {"error":str(exc)}
+@mcp.tool()
+def delete_action_note(action_id:str,note_id:str)->dict:
+    """Delete one action note only when requested; no other items are changed."""
+    return {"deleted":db.delete_action_note(action_id,note_id)}
+@mcp.tool()
 def add_to_thread(thread_id:str,text:str,kind:str="thought")->dict:
     """Add an observation, question, action, decision, or update."""
     return db.add(thread_id,kind,text) or {"error":"Thread not found"}

@@ -1,10 +1,10 @@
-name: Publish tether to PyPI
+name: Release tether
 on:
   workflow_dispatch:
   push:
     branches: [main]
     paths: [pyproject.toml, .github/workflows/publish-pypi.yml]
-    tags: ['v*']
+    tags: ['v20*']
 permissions:
   contents: read
 concurrency:
@@ -24,10 +24,12 @@ jobs:
         name: Check whether this version needs publishing
         shell: python
         run: |
-          import json, os, tomllib, urllib.request, urllib.error
+          import json, os, re, tomllib, urllib.request, urllib.error
           from pathlib import Path
           project=tomllib.loads(Path('pyproject.toml').read_text(encoding='utf-8'))['project']
           version=project['version']
+          if not re.fullmatch(r'20\d{2}\.[1-9]\d*',version):
+              raise SystemExit('Main releases must use YYYY.sequence, such as 2026.1')
           if os.environ.get('GITHUB_REF_TYPE')=='tag' and os.environ['GITHUB_REF_NAME']!='v'+version:
               raise SystemExit('Release tag must match pyproject.toml version')
           try:
@@ -62,6 +64,8 @@ jobs:
       - name: Install the wheel and the desktop extra in isolated environments
         run: python scripts/check_distribution.py
   publish:
+    permissions:
+      contents: write
     needs: [version, test]
     if: needs.version.outputs.publish == 'true'
     runs-on: ubuntu-latest
@@ -71,10 +75,13 @@ jobs:
         with:
           python-version: '3.11'
       - run: python -m pip install '.[dev]' build twine playwright
-      - run: python -m playwright install --with-deps chromium
+      - name: Install browser on the hosted runner
+        timeout-minutes: 3
+        run: python -m playwright install chromium
       - name: Browser interaction and calendar regression tests
         run: |
           python scripts/check_ui.py
+          python scripts/check_session_ui.py
           python scripts/capture_screenshots.py
       - name: Build the tested release
         run: |
@@ -86,13 +93,30 @@ jobs:
           path: |
             dist/*
             docs/screenshots/*.png
-      - name: Publish with the configured PyPI token
+      - name: Create the tested main release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION=$(python -c "from tend import __version__; print(__version__)")
+          TAG="v$VERSION"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "GitHub release $TAG already exists; existing assets are retained."
+          else
+            printf 'Tested on Windows, macOS, and Linux. Browser interaction and clean installation checks passed.\n\nPyPI publication is part of this workflow; see the publication step for its result.\n' > release-notes.txt
+            gh release create "$TAG" dist/* --target "$GITHUB_SHA" --title "tether $VERSION" --notes-file release-notes.txt
+          fi
+      - id: upload
+        name: Publish with the configured PyPI token
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_API_KEY }}
         run: |
           test -n "$TWINE_PASSWORD" || { echo 'PYPI_API_KEY is not available to this workflow'; exit 1; }
           python -m twine upload --verbose --non-interactive --disable-progress-bar dist/*
+      - name: Report a failed publication
+        if: failure() && steps.upload.outcome == 'failure'
+        run: |
+          echo 'PyPI publication did not complete. See the upload response above. The built GitHub release remains available; a rejected package name cannot be fixed by bumping its version.' >> "$GITHUB_STEP_SUMMARY"
       - name: Confirm the version is visible on PyPI
         shell: python
         run: |

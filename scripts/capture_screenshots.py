@@ -215,8 +215,6 @@ def main():
                 assert page.locator('body').evaluate('(body)=>body.scrollWidth<=innerWidth'), 'Chat must fit a phone'
                 composer=page.locator('#composer').bounding_box()
                 assert composer['y']+composer['height']<=845, 'The mobile message composer must stay visible'
-                page.screenshot(path=str(OUT/'conversation-mobile.png'),full_page=True)
-                capture_calendar(page, 'snapshot-mobile.png')
                 browser.close()
             print("Created:", ", ".join(p.name for p in sorted(OUT.glob("*.png"))))
         finally:
