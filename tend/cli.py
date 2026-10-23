@@ -11,6 +11,30 @@ from . import storage
 from pathlib import Path
 
 def main():
+    import argparse
+    parser=argparse.ArgumentParser(prog="tether",description="Tether local task assistant")
+    sub=parser.add_subparsers(dest="command")
+    serve=sub.add_parser("serve",help="Start browser and MCP services")
+    for target in (parser,serve):
+        target.add_argument("--host",default="127.0.0.1")
+        target.add_argument("--port",type=int)
+        target.add_argument("--mcp-port",type=int)
+        target.add_argument("--no-browser",action="store_true")
+    desktop=sub.add_parser("desktop",help="Install desktop launcher")
+    desktop.add_argument("action",choices=["install"])
+    desktop.add_argument("--destination",help="Shortcut directory (defaults to Desktop)")
+    args=parser.parse_args()
+    if args.command=="desktop":
+        from .desktop_install import install
+        print("Tether shortcut:",install(args.destination))
+        return
+    if args.host not in ("127.0.0.1","localhost","::1"):
+        parser.error("Tether is local-only; bind to 127.0.0.1 or localhost.")
+    if args.port is not None and not 1<=args.port<=65535:parser.error("Invalid --port")
+    if args.mcp_port is not None and not 1<=args.mcp_port<=65535:parser.error("Invalid --mcp-port")
+    if args.port is not None:os.environ["TEND_WEB_PORT"]=str(args.port)
+    if args.mcp_port is not None:os.environ["TEND_MCP_PORT"]=str(args.mcp_port)
+    if args.no_browser:os.environ["TEND_NO_BROWSER"]="1"
     # Reuse a running compatible Tend instance instead of attempting a duplicate.
     import socket, json
     target_port=int(os.environ.get("TEND_WEB_PORT","8765"))
@@ -24,7 +48,7 @@ def main():
             if health.get("app")=="tend" and health.get("streaming_chat") is True:
                 if os.environ.get("TEND_NO_BROWSER")!="1":
                     webbrowser.open(f"http://127.0.0.1:{target_port}/")
-                print("Tend is already running; reused existing web server.",flush=True)
+                print("Tether is already running; reused existing web server.",flush=True)
                 return
         except (OSError,ValueError,URLError):
             pass
@@ -56,8 +80,8 @@ def main():
                     stdin=subprocess.DEVNULL,stdout=output,stderr=subprocess.STDOUT,
                     close_fds=True))
         url=f"http://{web_host}:{web_port}"
-        print(f"Tend browser: {url}",flush=True)
-        print(f"Tend MCP: http://127.0.0.1:{mcp_port}/mcp",flush=True)
+        print(f"Tether browser: {url}",flush=True)
+        print(f"Tether MCP: http://127.0.0.1:{mcp_port}/mcp",flush=True)
         print(f"Local database: {store.path()}",flush=True)
         print("Press Ctrl+C to stop Tend when running in a terminal.",flush=True)
         # Wait for a valid response instead of opening an unavailable page.
