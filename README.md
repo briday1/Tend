@@ -1,4 +1,4 @@
-# Tend
+# Tether
 
 Tend is a local-first assistant for keeping track of things you're thinking about, working on, or need to revisit. Talk to it normally; it organizes tasks and remembers context in a local SQLite database.
 
@@ -35,6 +35,50 @@ These calendars are generated from local task data and appear inside the assista
 **Archive**
 
 ![Archived tasks in Tend](docs/screenshots/archive.png)
+
+## Install Tether with pip
+
+Requires Python 3.11 or newer. Install the same package on Windows, macOS, or Linux:
+
+```sh
+python -m pip install tether
+```
+
+**Option A — run as a local server:** `tether serve` opens the browser UI at
+`http://127.0.0.1:8765` and starts the local MCP server on port 8766.
+
+```sh
+tether serve --port 9000 --mcp-port 9001
+tether serve --no-browser
+```
+
+For safety the services bind to loopback only; they are not exposed to the network.
+Use Ctrl+C to stop the terminal-launched instance.
+
+**Option B — install a desktop shortcut:** the same pip installation can create a
+desktop launcher without PyInstaller, administrator privileges, or a separately built
+Windows executable:
+
+```sh
+tether desktop install
+tether desktop install --destination "/path/to/shortcuts"
+```
+
+The default location is the operating system's Desktop folder. On Windows this is a
+native `.lnk` shortcut to the installed Python interpreter; on macOS it is a
+`.command` launcher, and on Linux a `.desktop` entry. The shortcut starts the local
+server and opens the browser. macOS may require approving a downloaded/local script
+on first launch; Linux desktop environments may require marking the launcher trusted.
+Use a persistent Python environment when creating shortcuts, since shortcuts refer
+to that interpreter.
+
+Existing Tend installations keep their existing local database in `~/.tend`,
+and the legacy `tend` CLI remains an alias during migration.
+
+## Legacy Windows native installer (optional)
+
+The original `install-desktop.ps1` builds an optional native WebView2 app.
+**It is not required** for the pip install or desktop shortcut above.
 
 ## Install on Windows
 
