@@ -70,7 +70,8 @@ def main():
 
 def start_and_open(open_window=True):
     if sys.platform!="win32":
-        raise SystemExit("Desktop launcher currently supports Windows.")
+        # Allow cross-platform start; Windows-specific tray/webview features are optional
+        pass
     if not healthy():
         # Do not silently reuse a server with an incompatible API.
         import socket

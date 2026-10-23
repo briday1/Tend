@@ -54,6 +54,36 @@ The installer builds a native **Tend.exe** and creates a **Tend** shortcut on yo
 
 When you close the app window, Tend stays in your system tray. Choose **Open Tend** to reopen it or **Exit Tend** to stop the app and its services.
 
+## Install with Python only
+
+Tend can be run without building an exe. It works on Windows, macOS and Linux with a normal Python install.
+
+**uv – recommended**
+
+```shell
+# Cross-platform, opens in browser
+uv tool install 'tend @ git+https://github.com/briday1/Tend.git'
+tend
+
+# Windows Desktop mode with WebView + persistent system tray (Recommended for Windows)
+uv tool install 'tend[desktop] @ git+https://github.com/briday1/Tend.git'
+tend-desktop
+```
+
+**pipx**
+
+```shell
+# Cross-platform, opens in browser
+pipx install 'tend @ git+https://github.com/briday1/Tend.git'
+tend
+
+# Windows Desktop mode with WebView + persistent system tray (Recommended for Windows)
+pipx install 'tend[desktop] @ git+https://github.com/briday1/Tend.git'
+tend-desktop
+```
+
+The `tend` command starts the FastAPI server, MCP server and notifications and opens the UI in your browser. `tend-desktop` uses a native WebView window and system tray on Windows; on Linux/macOS it falls back to browser launch.
+
 ## First-time setup
 
 Open **Settings → AI connection**. Enter your provider's HTTPS API base URL, model name, and API key, then save and test the connection. The model must support OpenAI-compatible chat-completions tool calling. Your key is stored in your operating system's credential vault, not the Tend database.
@@ -70,7 +100,13 @@ Example things to say: “Remind me to follow up next Thursday,” “What am I 
 
 ## Updating
 
-For ordinary Tend updates, choose **Exit Tend** from the system tray, then run `git pull` inside your Tend folder and relaunch the shortcut. If the **native Windows app or its dependencies** changed, rerun `install-desktop.ps1` to rebuild `Tend.exe`.
+For ordinary Tend updates:
+
+* **uv tool**: `uv tool upgrade tend` or `uv tool upgrade tend-desktop`
+* **pipx**: `pipx upgrade tend`
+* **editable install**: `git pull && pip install -e .[desktop]`
+
+Exit Tend from the system tray or stop the `tend` process before pulling. If you use the native Windows build, rerun `install-desktop.ps1` to rebuild `Tend.exe`.
 
 ## Calendar snapshots and AI skill
 

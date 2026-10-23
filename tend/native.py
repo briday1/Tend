@@ -15,6 +15,20 @@ def _existing_window():
 
 def main():
     from tend import desktop
+    if sys.platform != "win32":
+        supervisor = desktop.start_and_open(open_window=True)
+        try:
+            while True:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            if supervisor is not None and supervisor.poll() is None:
+                try:
+                    from tend.shutdown import stop_process_tree
+                    stop_process_tree(supervisor.pid,log=desktop.log)
+                except Exception:
+                    pass
+        return
+
     import webview
     import pystray
     from PIL import Image
@@ -38,9 +52,11 @@ def main():
     exiting=False
     try:
         root=Path(sys.executable).resolve().parent.parent if getattr(sys,"frozen",False) else Path(__file__).resolve().parent.parent
-        py=root/".venv"/"Scripts"/"python.exe"
-        if not py.is_file():
-            raise RuntimeError("Tend Python environment not found: "+str(py)+". Re-run install-desktop.ps1.")
+        if os.name == "nt":
+            venv_py = root/".venv"/"Scripts"/"python.exe"
+        else:
+            venv_py = root/".venv"/"bin"/"python"
+        py = venv_py if venv_py.is_file() else sys.executable
         os.environ["TEND_SERVICE_PYTHON"]=str(py)
         supervisor=desktop.start_and_open(open_window=False)
         window=webview.create_window("Tend",f"http://127.0.0.1:{desktop.port()}/",
@@ -69,8 +85,8 @@ def main():
             try:window.destroy()
             except Exception:pass
         tray=pystray.Icon("Tend",Image.open(io.BytesIO(raster(256))).convert("RGBA"),"Tend",
-             pystray.Menu(pystray.MenuItem("Open Tend",reopen,default=True),
-                           pystray.MenuItem("Exit Tend",exit_app)))
+              pystray.Menu(pystray.MenuItem("Open Tend",reopen,default=True),
+                            pystray.MenuItem("Exit Tend",exit_app)))
         tray.run_detached()
         webview.start(gui="edgechromium",debug=False)
     finally:
