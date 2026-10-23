@@ -1,0 +1,56 @@
+name: Package checks
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches: [main]
+    paths: ['pyproject.toml', 'tend/**', 'tests/**', 'scripts/**', '.github/workflows/package-checks.yml']
+permissions:
+  contents: read
+concurrency:
+  group: package-checks-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/upload-artifact@v4
+        with:
+          name: source-under-test
+          retention-days: 3
+          include-hidden-files: true
+          path: |
+            pyproject.toml
+            README.md
+            tend/
+            tests/
+            scripts/
+            .github/workflows/
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install minimal application and test dependencies
+        run: python -m pip install '.[dev]' build twine
+      - name: Test
+        run: python -m pytest -q
+      - name: Build and validate distributions
+        run: |
+          python -m build
+          python -m twine check dist/*
+      - name: Check installed commands and core exports
+        run: >-
+          python -c "from importlib.metadata import distribution;
+          from tend.snapshot_export import png, svg;
+          d=distribution('tether');
+          names={e.name for e in d.entry_points if e.group in ('console_scripts','gui_scripts')};
+          assert names=={'tether','tether-desktop'}, names;
+          print('Verified entry points:', sorted(names))"
