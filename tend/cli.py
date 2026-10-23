@@ -45,7 +45,7 @@ def main():
         try:
             with urlopen(f"http://127.0.0.1:{target_port}/api/health",timeout=1.5) as response:
                 health=json.load(response)
-            if health.get("app")=="tend" and health.get("streaming_chat") is True:
+            if health.get("app")=="tend" and health.get("brand")=="tether" and health.get("streaming_chat") is True:
                 if os.environ.get("TEND_NO_BROWSER")!="1":
                     webbrowser.open(f"http://127.0.0.1:{target_port}/")
                 print("Tether is already running; reused existing web server.",flush=True)
