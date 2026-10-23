@@ -7,8 +7,8 @@ A local-first personal assistant for unfinished thoughts. Talk naturally: “Rem
 Python 3.11 or newer.
 
 ```bash
-git clone https://github.com/briday1/Tend.git
-cd Tend
+git clone https://github.com/briday1/tether-chat.git
+cd tether-chat
 python -m pip install -e .
 tend
 ```
@@ -86,8 +86,8 @@ Requires Windows 10/11, Python 3.11+, Git, and Microsoft Edge or Google Chrome. 
 Open **PowerShell** and run:
 
 ```powershell
-git clone https://github.com/briday1/Tend.git
-cd Tend
+git clone https://github.com/briday1/tether-chat.git
+cd tether-chat
 py -3 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -e .
 powershell -ExecutionPolicy Bypass -File .\install-desktop.ps1
@@ -98,7 +98,7 @@ A **tether-chat** shortcut appears on your Windows desktop. Double-click **that 
 For an existing installation, update it with:
 
 ```powershell
-cd Tend
+cd tether-chat
 git pull
 .\.venv\Scripts\python.exe -m pip install -e .
 powershell -ExecutionPolicy Bypass -File .\install-desktop.ps1
