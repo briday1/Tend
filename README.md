@@ -84,7 +84,7 @@ uv tool install 'tether[desktop]'
 tether-desktop
 ```
 
-This exposes `tether-desktop` globally from uv's isolated Python environment. On Windows it opens a native WebView window with a persistent system-tray menu; closing the window hides it while **Exit Tether** ends the tray and its background services. On macOS and Linux it launches the browser-based UI (the native Windows tray behavior is not yet implemented on those platforms). Add `tether-desktop` to your operating system's login/startup applications if you want it available after each sign-in. Creating a shortcut is optional: `tether desktop install` generates one in Desktop or a custom folder. For shortcut creation from an isolated tool install, run `uv tool run --from 'tether[desktop]' tether desktop install` or install the desktop extra into the current environment.
+This exposes `tether-desktop` globally from uv's isolated Python environment. On Windows it opens a native WebView window with a persistent system-tray menu; closing the window hides it while **Exit Tether** ends the tray and its background services. On macOS and Linux it opens the browser-based UI and attempts to keep the services running from a system-tray menu; tray support depends on the desktop environment and is not yet verified across distributions. Add `tether-desktop` to your operating system's login/startup applications if you want it available after each sign-in. Creating a shortcut is optional: `tether desktop install` generates one in Desktop or a custom folder. For shortcut creation from an isolated tool install, run `uv tool run --from 'tether[desktop]' tether desktop install` or install the desktop extra into the current environment.
 
 ## Legacy Windows native installer (optional)
 
