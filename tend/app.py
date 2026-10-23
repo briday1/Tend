@@ -13,7 +13,7 @@ from . import storage
 from .rendering import render
 from .ai import reflect
 
-app=FastAPI(title="Tend")
+app=FastAPI(title="Tether")
 app.add_middleware(TrustedHostMiddleware,allowed_hosts=["127.0.0.1","localhost","[::1]"])
 db.init()
 class Ask(BaseModel):
