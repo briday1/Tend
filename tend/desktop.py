@@ -1,4 +1,4 @@
-"""Windows desktop entry point: start Tend only when needed, then open an app window."""
+"""Windows desktop entry point: start Tether only when needed, then open an app window."""
 import json
 import os
 import subprocess
@@ -41,7 +41,7 @@ def open_app():
 def show_error(message):
     try:
         import ctypes
-        ctypes.windll.user32.MessageBoxW(None,str(message),"Tend launcher",0x10)
+        ctypes.windll.user32.MessageBoxW(None,str(message),"Tether launcher",0x10)
     except Exception:
         pass
 
@@ -50,7 +50,7 @@ def main():
     create_mutex=ctypes.windll.kernel32.CreateMutexW
     create_mutex.restype=ctypes.c_void_p
     create_mutex.argtypes=(ctypes.c_void_p,ctypes.c_int,ctypes.c_wchar_p)
-    mutex=create_mutex(None,False,"Local\\TendDesktopTray")
+    mutex=create_mutex(None,False,"Local\\TetherDesktopTray")
     if not mutex:raise RuntimeError("Could not initialize desktop launcher")
     if ctypes.windll.kernel32.GetLastError()==183:
         # A tray instance already exists; just reopen its application window.
@@ -58,7 +58,7 @@ def main():
             if healthy():break
             time.sleep(.25)
         if healthy():open_app()
-        else:show_error("Tend is still starting or unavailable. Check the tray and server.log.")
+        else:show_error("Tether is still starting or unavailable. Check the tray and server.log.")
         ctypes.windll.kernel32.CloseHandle(mutex)
         return
     server=None
@@ -69,8 +69,6 @@ def main():
         ctypes.windll.kernel32.CloseHandle(mutex)
 
 def start_and_open(open_window=True):
-    if sys.platform!="win32":
-        raise SystemExit("Desktop launcher currently supports Windows.")
     if not healthy():
         # Do not silently reuse a server with an incompatible API.
         import socket
@@ -78,7 +76,7 @@ def start_and_open(open_window=True):
             probe.settimeout(.5)
             occupied=probe.connect_ex(("127.0.0.1",port()))==0
         if occupied:
-            raise RuntimeError("An outdated or different server is using Tend's port. Stop that process before launching the new Tend shortcut.")
+            raise RuntimeError("An outdated or different server is using Tether's port. Stop that process before launching the new Tether shortcut.")
         # Run the console Python interpreter with its console creation suppressed.
         # The supervisor prints progress; pythonw has no stdout and can crash on print().
         py=os.environ.get("TEND_SERVICE_PYTHON",sys.executable)
@@ -96,11 +94,11 @@ def start_and_open(open_window=True):
         for _ in range(120):
             if healthy():break
             if child.poll() is not None:
-                raise RuntimeError("Tend server process exited. Check ~/.tend/server.log")
+                raise RuntimeError("Tether server process exited. Check ~/.tend/server.log")
             time.sleep(.25)
         else:
-            log("Tend server failed to become ready; see server.log")
-            raise RuntimeError("Tend did not start; see ~/.tend/server.log")
+            log("Tether server failed to become ready; see server.log")
+            raise RuntimeError("Tether did not start; see ~/.tend/server.log")
     if open_window:open_app()
     return child if 'child' in locals() else None
 
@@ -113,7 +111,7 @@ def run_tray(server):
     tray_icon=Image.open(io.BytesIO(raster(256))).convert("RGBA")
     def reopen(icon,item):
         if not healthy():
-            show_error("Tend's web server is unavailable. Exit Tend and start it again from the desktop shortcut.")
+            show_error("Tether's web server is unavailable. Exit Tether and start it again from the desktop shortcut.")
         else:
             open_app()
     def quit_tend(icon,item):
@@ -137,10 +135,10 @@ def run_tray(server):
         except Exception as exc:
             log("Unable to stop services cleanly: "+repr(exc))
     menu=pystray.Menu(
-        pystray.MenuItem("Open Tend",reopen,default=True),
-        pystray.MenuItem("Exit Tend" if server else "Exit Tend tray",quit_tend),
+        pystray.MenuItem("Open Tether",reopen,default=True),
+        pystray.MenuItem("Exit Tether" if server else "Exit Tether tray",quit_tend),
     )
-    icon=pystray.Icon("tend",tray_icon,"Tend",menu)
+    icon=pystray.Icon("tend",tray_icon,"Tether",menu)
     icon.run()
 
 if __name__=="__main__":
