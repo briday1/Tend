@@ -80,7 +80,8 @@ def _run():
     from PIL import Image
     from .windows_icon import raster,create_icon
 
-    ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID('Tether.Desktop')
+    from .branding import set_process_identity
+    set_process_identity()
     kernel=ctypes.windll.kernel32
     kernel.CreateMutexW.restype=ctypes.c_void_p
     kernel.CreateMutexW.argtypes=[ctypes.c_void_p,ctypes.c_int,ctypes.c_wchar_p]

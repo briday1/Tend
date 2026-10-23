@@ -26,6 +26,7 @@ def seed(folder):
     store.init()
     task=store.create('Prepare briefing',summary='Keep the supporting documents together.',categories=['Projects'])
     first=store.add(task['id'],'action','Contact the review team')
+    store.add_action_note(first['id'],'Request sent; waiting for the review team to confirm access.')
     store.update_action(first['id'],{'due_at':'2030-10-27T12:00:00+00:00','revisit_at':'2030-10-26T09:00:00+00:00'})
     second=store.add(task['id'],'action','Check the draft attachment')
     store.update_action(second['id'],{'due_at':'2030-11-02T12:00:00+00:00'})
@@ -67,15 +68,15 @@ def main():
                             elif path=='/api/mentions':
                                 tasks=store.list_threads()
                                 data={'categories':sorted({c for t in tasks for c in t['categories']}),'tasks':tasks,'actions':store.query("SELECT * FROM entries WHERE kind='action'")}
-                            elif path=='/api/conversation/rendered':data=[{'role':'assistant','body':'','html':f'<p>In <strong>Projects</strong>, <a href="/board#task/{task_id}">Prepare briefing</a> includes <em>Contact the review team</em>.</p>'}]
+                            elif path=='/api/chat/state':data={'jobs':[],'messages':[{'id':'sample','role':'assistant','body':'Example','html':f'<p>In <strong>Projects</strong>, <a href="/board#task/{task_id}">Prepare briefing</a> includes <em>Contact the review team</em>.</p>'}]}
                             elif path.startswith('/api/threads/'):data=store.get(path.split('/')[-1])
                             elif path.startswith('/api/actions/') and request.request.method=='PATCH':data=store.update_action(path.split('/')[-1],request.request.post_data_json)
                             else:data={'items':[]}
                             request.fulfill(status=200,content_type='application/json',body=json.dumps(data));return
                         file={'/':'index.html','/board':'board.html'}.get(path,path.lstrip('/'))
-                        if file not in {'index.html','board.html','theme.css','theme.js','favicon.svg'}:request.fulfill(status=404);return
+                        if file not in {'index.html','board.html','theme.css','theme.js','chat.js','action-notes.js','favicon.svg'}:request.fulfill(status=404);return
                         mime='text/css' if file.endswith('.css') else 'application/javascript' if file.endswith('.js') else 'text/html'
-                        request.fulfill(status=200,content_type=mime,body=(ROOT/'tend'/file).read_text())
+                        request.fulfill(status=200,content_type=mime,body=(ROOT/'tend'/file).read_text(encoding='utf-8'))
                     page.route('**/*',route)
                 else:page.route('**/api/attention*',lambda route:route.fulfill(status=200,content_type='application/json',body='{"items":[]}'))
                 page.goto(base+'/',wait_until='networkidle')

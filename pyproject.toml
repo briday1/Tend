@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tether"
-version = "0.2.2"
+version = "2026.1"
 description = "Local-first task and action-item assistant"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -34,7 +34,7 @@ desktop = ["pywebview>=5,<7", "pystray>=0.19,<1"]
 include = ["tend*"]
 
 [tool.setuptools.package-data]
-tend = ["index.html", "board.html", "snapshot.html", "theme.css", "theme.js", "favicon.svg", "manifest.webmanifest"]
+tend = ["index.html", "board.html", "snapshot.html", "theme.css", "theme.js", "chat.js", "action-notes.js", "favicon.svg", "manifest.webmanifest"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

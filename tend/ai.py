@@ -63,6 +63,9 @@ def dispatch(name,args):
     if name=="get_thread":return store.get(args["id"]) or {"error":"Not found"}
     if name=="capture":return store.create(args["title"],args.get("summary",""))
     if name=="add_note":return store.add(args["id"],args.get("kind","thought"),args["text"]) or {"error":"Not found"}
+    if name=="add_action_note":return store.add_action_note(args["action_id"],args["text"]) or {"error":"Action not found"}
+    if name=="update_action_note":return store.update_action_note(args["action_id"],args["note_id"],args["text"]) or {"error":"Note not found"}
+    if name=="delete_action_note":return {"deleted":store.delete_action_note(args["action_id"],args["note_id"])}
     if name=="update_action":return store.update_action(args["action_id"],{k:args[k] for k in ("due_at","revisit_at","done") if k in args}) or {"error":"Action not found"}
     if name=="set_status":
         if args["state"] not in ("open","waiting","paused","settled"):return {"error":"Invalid state"}
@@ -93,6 +96,9 @@ TOOLS=[
  spec("get_thread","Explore notes and related ideas",{"id":S},["id"]),
  spec("capture","Remember a new thought or concern verbatim",{"title":S,"summary":S},["title"]),
  spec("add_note","Add a note OR a distinct actionable checklist item to an existing task. Use kind=action for an action item. Return its id and use update_action for item-specific dates.",{"id":S,"text":S,"kind":{"type":"string","enum":["thought","question","action","decision","update"]}},["id","text"]),
+ spec("add_action_note","Save feedback, context or a note under ONE specific action item, not its parent task. Use get_thread to read existing action notes before adding a duplicate.",{"action_id":S,"text":S},["action_id","text"]),
+ spec("update_action_note","Edit an existing note under one action. Requires both the real action ID and note ID.",{"action_id":S,"note_id":S,"text":S},["action_id","note_id","text"]),
+ spec("delete_action_note","Delete a note only when explicitly requested; never delete sibling notes or the action itself.",{"action_id":S,"note_id":S},["action_id","note_id"]),
  spec("update_action","Set or clear the deadline, Bring to attention time, or completion for ONE action item under a task; never changes the parent task schedule.",{"action_id":S,"due_at":{"anyOf":[S,{"type":"null"}]},"revisit_at":{"anyOf":[S,{"type":"null"}]},"done":{"type":"boolean"}},["action_id"]),
  spec("set_status","Mark thought as active, blocked/waiting, paused, or finished/settled",{"id":S,"state":{"type":"string","enum":["open","waiting","paused","settled"]}},["id","state"]),
  spec("set_revisit","Set or clear Bring to attention, the resurfacing/notification date separate from any deadline; use ISO 8601 with timezone or null",{"id":S,"when":{"anyOf":[S,{"type":"null"}]}},["id"]),
@@ -105,9 +111,9 @@ TOOLS=[
  spec("set_categories","Assign multiple categories to one task. Add preserves existing memberships; remove deletes only the named memberships; replace sets the whole list. Never duplicate tasks to put them in different categories.",{"id":S,"categories":{"type":"array","items":S,"maxItems":20},"mode":{"type":"string","enum":["replace","add","remove"]}},["id","categories","mode"]),
  spec("connect","Connect two related thoughts",{"first":S,"second":S},["first","second"])
 ]
-SYSTEM="""You are Tend, the user's personal assistant for unfinished thoughts. Converse naturally and briefly.
+SYSTEM="""You are tether, the user's personal assistant for unfinished thoughts. Converse naturally and briefly.
 Use tools to actually save, find, update or mark things done. NEVER say a change was saved without tool success. During user conversations, consider whether a future notification would be useful; schedule it with set_revisit only when the user explicitly requests a time or a future notification is unmistakably justified; never invent a date/time or put a reminder on a category. For action items, call update_action using the action_id; never set_revisit on a task to schedule one action. Task-level attention is only for explicitly requested reminders applying to the whole task. Background processes never call AI.
-For new information, search for relevant existing tasks to avoid duplicates. Tasks can contain MULTIPLE independent action items (entries with kind action). Find an existing task by subject and add an action item there when appropriate; do NOT make a new top-level task for every action. Find existing matching actions before adding duplicates. Categories group tasks, and tasks may belong to multiple categories. Create a task for a new subject only.
+For new information, search for relevant existing tasks to avoid duplicates. Each action item can have its own notes. Store feedback about a specific action with add_action_note, not add_note on the parent task. Read the action notes in get_thread for check-in context. Never alter sibling actions or dates without the user asking. Tasks can contain MULTIPLE independent action items (entries with kind action). Find an existing task by subject and add an action item there when appropriate; do NOT make a new top-level task for every action. Find existing matching actions before adding duplicates. Categories group tasks, and tasks may belong to multiple categories. Create a task for a new subject only.
 Never call user-visible objects "threads": say "tasks" and "categories". The old word thread is an internal database compatibility term only. Never say "resurface" or "revisit" when referring to reminders: use "Bring to attention". Create a task for a distinct subject, with one or more action items for its actionable outcomes; keep user wording and important facts. A task can belong to multiple categories. Tool results include a categories list; category is only the first membership for compatibility. Use set_categories with mode add to add membership without losing existing ones; replace only when replacing all memberships is intended. Never create duplicate tasks for different categories. Overall task counts count unique IDs; per-category counts can overlap. When capturing a task, assign relevant categories immediately using set_categories. A category groups tasks and is never a separate task. When the user gives another action relating to an existing task, add the action item to that task, not another category or task. Avoid inventing categories. When substantially updating a task, retain categories unless the user asks to change them. Do not force priorities or classifications.
 'Blocked' means waiting; 'done' means settled. If target is ambiguous, ask which thought, do not guess.
 The Board shows categories. When asked to organize the board, inspect all available threads and use set_categories to group them into useful categories, preserving existing memberships unless replacement is intended. Prefer stable meaningful categories to too many narrow ones. Let the user manually override categories. When user asks for a morning or daily brief, use daily_brief and enrich it thoughtfully using relevant notes. When user asks what is tracked, inspect stored context and group by meaning. Offer at most one useful follow-up. Refer to existing tasks as clickable Markdown links with exact href /board#task/ID, for example [Contact ISA](/board#task/ID). Never present plain italic task titles as substitutes for links. Category links should use /board#category/ENCODED_NAME and can be clicked to inspect grouped tasks. No invented links or IDs.
@@ -164,7 +170,7 @@ def request(messages,tools=True,max_tokens=None,progress=None):
                 detail="Cannot connect to AI provider. Check VPN/network access and provider base URL."
             raise ValueError(detail) from e
 
-def chat(message, progress=None):
+def chat(message, progress=None, history=None):
     """Short conversation context, progressive tool use, and repeat-loop protection."""
     from datetime import datetime
     def status(text):
@@ -172,7 +178,7 @@ def chat(message, progress=None):
     transcript=[{"role":"system","content":SYSTEM+"\nCurrent local date/time: "+datetime.now().astimezone().isoformat()}]
     # Do not send the entire saved conversation. Keep a small recent window,
     # then retrieve factual long-term context explicitly through tools.
-    for item in store.conversation(10):
+    for item in (store.conversation(10) if history is None else history):
         if item["role"] in ("user","assistant"):
             transcript.append({"role":item["role"],"content":item["body"][:3000]})
     transcript.append({"role":"user","content":message})

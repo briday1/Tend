@@ -92,9 +92,29 @@ body.drawer-open{overflow:hidden}
 #board:has(.actions-section) .task-list .task-row:has(.task-row-category){grid-template-columns:minmax(80px,1fr) 65px}
 #board:has(.actions-section) .task-row-category,#board:has(.actions-section) .task-row-repeat,#board:has(.actions-section) .task-row-date{display:none}
 #board .task-row.selected{outline:2px solid var(--accent);outline-offset:-2px;background:var(--soft)!important}
-#board .category-row.selected{background:var(--soft)!important;border-color:var(--accent)!important}
+
 #board .action-list-row.selected{outline:2px solid var(--accent);outline-offset:-2px}
 @media(max-width:950px){#board:has(.actions-section){grid-template-columns:minmax(155px,.7fr) minmax(210px,1fr)}#board .actions-section{grid-column:1/-1;border-left:0;border-top:1px solid var(--line);padding:16px 0 0}}
 @media(max-width:600px){#board:has(.actions-section){grid-template-columns:minmax(0,1fr)}.reference-drawer,.action-drawer{padding:18px}.topnav .brand{font-size:22px!important}.topnav .tend-mark{width:25px!important;height:25px!important}}
 /* Reserve enough room for the full lowercase wordmark. */
 @media(min-width:651px){.topnav .brand{width:144px!important;flex-basis:144px!important}}
+
+/* Shared wordmark and small drawer controls: identical on both pages. */
+.topnav .brand,.topnav .brand .brand-word{color:var(--text)!important}
+.topnav .brand .brand-word>span{color:var(--accent)!important}
+.reference-close,#panel #close{float:right;display:inline-flex!important;align-items:center;justify-content:center;flex:0 0 28px!important;width:28px!important;min-width:28px!important;height:28px!important;min-height:28px!important;padding:0!important;margin:0!important;font-size:14px!important;line-height:1!important;border-radius:6px!important}
+.actions-section .edit-task-button{display:inline-flex;align-items:center;width:auto!important;min-height:28px;padding:4px 9px!important;font-size:12px!important;line-height:18px;border-radius:6px}
+.category-row{border:1px solid var(--line)!important;border-left-width:1px!important;background:color-mix(in srgb,var(--category-color,var(--accent)) 13%,var(--paper))!important}
+.category-row:hover{background:color-mix(in srgb,var(--category-color,var(--accent)) 20%,var(--paper))!important}
+.category-row.selected{background:color-mix(in srgb,var(--category-color,var(--accent)) 22%,var(--paper))!important;border-color:var(--category-color,var(--accent))!important}
+.category-row:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.category-tag::before{content:none!important;display:none!important}
+.attention-item{display:block;width:100%;text-align:left;color:var(--text);font:inherit}
+.attention-item:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.chat-pending{font-size:13px}.chat-pending>small{display:block;margin-top:7px}
+.action-notes{margin-top:22px;border-top:1px solid var(--line);padding-top:12px}
+.action-notes h3{font-size:14px;margin:8px 0 12px}.action-note{padding:10px 0;border-bottom:1px solid var(--line)}
+.action-note-body{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.5;font-size:13px;margin:0 0 5px}
+.note-controls{display:flex;gap:7px;margin-top:6px}.action-notes .small-button{display:inline-flex;width:auto!important;min-height:26px;padding:3px 8px!important;font-size:12px!important;line-height:18px;border-radius:6px}
+.action-notes textarea{display:block;box-sizing:border-box;width:100%;resize:vertical;min-height:75px;max-height:300px;padding:9px;border:1px solid var(--line);border-radius:7px;background:var(--panel);color:var(--text);font:inherit;font-size:13px;margin:7px 0}
+.note-add{margin-top:15px}.note-add label{font-size:12px}.note-edit button{margin-right:6px}

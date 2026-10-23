@@ -221,7 +221,9 @@ def command_reference():return commands.COMMANDS
 def brief():return {"text":db.daily_brief(),"html":render(db.daily_brief())}
 
 @app.get("/api/attention")
-def attention(force:bool=False):return ai.attention(force)
+def attention(force:bool=False):
+    from .attention import items
+    return items(force)
 
 class ActivityInput(BaseModel):
     body:str=Field(min_length=1,max_length=10000)
@@ -306,3 +308,13 @@ def test_ai_connection():
         if not response.get("choices"):raise ValueError("Provider returned no response")
         return {"ok":True,"message":"Connection successful"}
     except ValueError as exc:raise HTTPException(502,str(exc)) from None
+
+
+@app.get("/chat.js")
+def chat_script():return FileResponse(Path(__file__).with_name("chat.js"),media_type="application/javascript")
+
+@app.get("/action-notes.js")
+def action_notes_script():return FileResponse(Path(__file__).with_name("action-notes.js"),media_type="application/javascript")
+
+from .chat_api import router as chat_router
+app.include_router(chat_router)
