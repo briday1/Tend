@@ -100,7 +100,7 @@ function browseReference(ref){
   const actions=mentionData.actions.filter(a=>a.thread_id===task.id);
   if(!actions.length)region.append(el('p','muted','No action items yet.'));
   for(const a of actions){
-   const box=el('div','browse-action'+(a.id===ref.id?' highlighted':''));
+   const box=el('button','browse-action'+(a.id===ref.id?' highlighted':''));box.type='button';box.onclick=()=>browseReference({type:'action',id:a.id,parent:task.id,title:a.body});
    box.append(el('div','', (a.done?'✓ ':'○ ')+a.body));
    if(a.due_at)box.append(el('small','','Due '+new Date(a.due_at).toLocaleDateString()));
    if(a.revisit_at)box.append(el('small','','Bring to attention '+new Date(a.revisit_at).toLocaleString()));
