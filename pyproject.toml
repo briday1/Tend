@@ -3,9 +3,9 @@ requires = ["setuptools>=69"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "tend"
+name = "tether"
 version = "0.2.0"
-description = "Local-first home for thoughts and open loops"
+description = "Local-first task and action-item assistant"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
@@ -22,6 +22,7 @@ dependencies = [
 ]
 
 [project.scripts]
+tether = "tend.cli:main"
 tend = "tend.cli:main"
 
 [project.optional-dependencies]
