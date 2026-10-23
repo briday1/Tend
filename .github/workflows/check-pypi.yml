@@ -13,12 +13,12 @@ jobs:
     steps:
       - name: Check exact normalized PyPI project name
         env:
-          CANDIDATE: tether-taskboard
+          CANDIDATE: tether
         run: |
           python - <<'PY'
           import json, os, sys, urllib.error, urllib.request
-          from packaging.utils import canonicalize_name
-          name=canonicalize_name(os.environ["CANDIDATE"])
+          import re
+          name=re.sub(r'[-_.]+','-',os.environ['CANDIDATE']).lower()
           url="https://pypi.org/pypi/"+name+"/json"
           req=urllib.request.Request(url,headers={"User-Agent":"Tether-name-check/1.0"})
           try:
