@@ -56,7 +56,7 @@ function categoryColor(name){let hash=0;for(const char of name.toLowerCase())has
 function el(tag,className,text){let node=document.createElement(tag);if(className)node.className=className;if(text!==undefined)node.textContent=text;return node}
 async function api(path,method='GET',body){let r=await fetch('/api'+path,{method,headers:{'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body)});if(!r.ok)throw Error((await r.json()).detail||'Request failed');return r.json()}
 function error(e){$('#error').textContent=e.message||String(e)}
-let selectedCategory=null,groupCache=[],showArchived=false,archivedCache=[],editingCategories=[];
+let selectedCategory=null,selectedTask=null,groupCache=[],showArchived=false,archivedCache=[],editingCategories=[];
 const taskCategories=t=>t.categories?.length?t.categories:[t.category||'Unsorted'];
 function uniqueTasks(groups){return [...new Map(groups.flatMap(g=>g.threads).map(t=>[t.id,t])).values()]}
 function categoryTag(name,removable=false){
@@ -78,7 +78,7 @@ function taskCard(t,showCategory=false){
  card.append(el('span','task-row-state'+(t.due?' due':''),status));
  card.append(el('span','task-row-repeat',t.recurrence?'↻ '+t.recurrence:''));
  card.append(el('span','task-row-date',t.due_at?'Due '+new Date(t.due_at).toLocaleDateString():t.next_occurrence?'Next '+new Date(t.next_occurrence).toLocaleDateString():''));
- card.onclick=()=>open(t.id);card.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();open(t.id)}};
+ card.onclick=()=>{selectedTask=t.id;drawBoard()};card.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();selectedTask=t.id;drawBoard()}};if(selectedTask===t.id)card.classList.add('selected');
  return card;
 }
 function drawBoard(){
@@ -93,14 +93,14 @@ function drawBoard(){
  const categoryHeader=el('div','category-header');
  categoryHeader.append(el('h2','section-heading',showArchived?'Archived categories':'Categories'));
  const archiveSwitch=el('button','archive-switch',showArchived?'Show active tasks':'View archive');
- archiveSwitch.onclick=()=>{showArchived=!showArchived;selectedCategory=null;drawBoard()};
+ archiveSwitch.onclick=()=>{showArchived=!showArchived;selectedCategory=null;selectedTask=null;drawBoard()};
  categoryHeader.append(archiveSwitch);
  categories.append(categoryHeader);
  const rows=el('div','category-rows');
  const allButton=el('button','category-row'+(selectedCategory===null?' selected':''));
  allButton.append(el('span','category-name','All categories'));
  allButton.type='button';allButton.append(el('span','category-count',String(uniqueTasks(matching).length)));
- allButton.onclick=()=>{selectedCategory=null;drawBoard()};
+ allButton.onclick=()=>{selectedCategory=null;selectedTask=null;drawBoard()};
  rows.append(allButton);
  for(const group of matching){
    const row=el('button','category-row'+(selectedCategory===group.name?' selected':''));
@@ -109,7 +109,7 @@ function drawBoard(){
    const count=el('span','category-count',String(group.threads.length));row.append(count);
    const needs=group.threads.filter(t=>t.due||t.deadline_due).length;
    if(needs)row.append(el('span','category-flag',needs+' attention'));
-   row.onclick=()=>{selectedCategory=group.name;drawBoard()};
+   row.onclick=()=>{selectedCategory=group.name;selectedTask=null;drawBoard()};
    rows.append(row);
  }
  categories.append(rows);board.append(categories);
@@ -126,6 +126,31 @@ function drawBoard(){
  }
  if(!tasks.length)list.append(el('p','hint','No matching tasks.'));
  section.append(list);board.append(section);
+ if(selectedTask){
+  const active=tasks.find(t=>t.id===selectedTask);
+  if(!active){selectedTask=null;return}
+  const pane=el('section','actions-section');pane.append(el('h2','section-heading','Action items'));
+  pane.append(el('p','hint',active.title));
+  const edit=el('button','secondary','Edit task');edit.onclick=()=>open(active.id);pane.append(edit);
+  const items=el('div','action-items');pane.append(items);board.append(pane);
+  api('/threads/'+encodeURIComponent(active.id)).then(t=>{
+   if(selectedTask!==t.id||!pane.isConnected)return;
+   const actions=(t.entries||[]).filter(e=>e.kind==='action');items.replaceChildren();
+   if(!actions.length)items.append(el('p','hint','No action items yet.'));
+   for(const a of actions){
+    const item=el('div','action-item');const head=el('label','action-label');const check=el('input');check.type='checkbox';check.checked=!!a.done;
+    check.onchange=async()=>{try{await api('/actions/'+encodeURIComponent(a.id),'PATCH',{done:check.checked})}catch(err){check.checked=!check.checked;error(err)}};
+    head.append(check,document.createTextNode(a.body));item.append(head);
+    const meta=el('div','action-meta');if(a.due_at)meta.append(el('span','','Due '+new Date(a.due_at).toLocaleDateString()));if(a.revisit_at)meta.append(el('span','','Attention '+new Date(a.revisit_at).toLocaleString()));item.append(meta);
+    const dates=el('div','action-dates');
+    for(const [field,label] of [['due_at','Due'],['revisit_at','Bring to attention']]){
+     const wrap=el('label','action-date',label);const input=el('input');input.type='datetime-local';input.value=a[field]?new Date(a[field]).toLocaleString('sv-SE').slice(0,16).replace(' ','T'):'';
+     input.onchange=async()=>{try{await api('/actions/'+encodeURIComponent(a.id),'PATCH',{[field]:input.value?new Date(input.value).toISOString():null});const note=meta.querySelector('[data-field="'+field+'"]');if(note)note.remove()}catch(err){error(err)}};wrap.append(input);dates.append(wrap);
+    }
+    item.append(dates);items.append(item);
+   }
+  }).catch(error);
+ }
 }
 async function load(){try{
  groupCache=await api('/board');archivedCache=await api('/archived');
@@ -159,6 +184,6 @@ document.querySelectorAll('input[name="databaseMode"]').forEach(input=>input.onc
 $('#browseDatabase').onclick=async()=>{const button=$('#browseDatabase');button.disabled=true;$('#storageStatus').textContent='Opening folder chooser on this computer…';try{if(databaseMode()==='existing'){$('#storageStatus').textContent='For an existing database, enter its full .sqlite3 file path.';return}const answer=await api('/storage/choose-folder','POST',{});if(answer.folder){$('#databasePath').value=answer.folder;$('#storageStatus').textContent='Selected folder: '+answer.folder}else{$('#storageStatus').textContent='Selection cancelled.'}}catch(err){$('#storageStatus').textContent=err.message}finally{button.disabled=false}};
 $('#storageForm').onsubmit=async e=>{e.preventDefault();const button=$('#applyDatabase');button.disabled=true;try{const result=await api('/storage','POST',{path:$('#databasePath').value.trim(),mode:databaseMode()});$('#storageStatus').textContent='Switching database and restarting Tend services…';const expected=result.pending;let attempts=0;const check=async()=>{try{const info=await api('/storage');if(!info.pending&&info.current===expected){$('#storageStatus').textContent='Database location updated: '+info.current;button.disabled=false;return}}catch(err){}if(++attempts<80)setTimeout(check,500);else{$('#storageStatus').textContent='Could not confirm the switch. Check the Tend terminal; the original database is retained.';button.disabled=false}};setTimeout(check,900)}catch(err){$('#storageStatus').textContent=err.message;button.disabled=false}};
 
-load().then(()=>{if(location.hash.startsWith('#task/'))open(decodeURIComponent(location.hash.slice(6)))});
-window.addEventListener('hashchange',()=>{if(location.hash.startsWith('#task/'))open(decodeURIComponent(location.hash.slice(6)))});
+load().then(()=>{if(location.hash.startsWith('#task/')){selectedTask=decodeURIComponent(location.hash.slice(6));drawBoard()}else if(location.hash.startsWith('#category/')){selectedCategory=decodeURIComponent(location.hash.slice(10));drawBoard()}else if(location.hash.startsWith('#action/')){selectedTask=decodeURIComponent(location.hash.slice(8).split('/')[0]);drawBoard()}});
+window.addEventListener('hashchange',()=>{if(location.hash.startsWith('#task/')){selectedTask=decodeURIComponent(location.hash.slice(6));drawBoard()}else if(location.hash.startsWith('#category/')){selectedCategory=decodeURIComponent(location.hash.slice(10));selectedTask=null;drawBoard()}else if(location.hash.startsWith('#action/')){selectedTask=decodeURIComponent(location.hash.slice(8).split('/')[0]);drawBoard()}});
 </script></body></html>
