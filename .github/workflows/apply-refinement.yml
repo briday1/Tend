@@ -6,14 +6,17 @@ on:
     paths: ['.github/refinement/**', '.github/workflows/apply-refinement.yml']
 permissions:
   contents: write
+concurrency:
+  group: tether-refinement-validation
+  cancel-in-progress: true
 jobs:
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: fix/2026-1-workflow-and-ui
+          ref: ${{ github.sha }}
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -53,7 +56,8 @@ jobs:
           python -m compileall -q tend scripts tests
           python -m pytest -q
       - name: Install test browser
-        run: python -m playwright install --with-deps chromium
+        timeout-minutes: 3
+        run: python -m playwright install chromium
       - name: Test UI, navigation, attention, and action notes
         run: |
           python scripts/check_ui.py
@@ -78,9 +82,11 @@ jobs:
       - name: Commit only validated source and desktop screenshots
         shell: python
         run: |
-          import json,subprocess
+          import json,os,subprocess
           from pathlib import Path
           run=lambda *args:subprocess.run(args,check=True)
+          current=subprocess.check_output(['git','ls-remote','origin','refs/heads/fix/2026-1-workflow-and-ui'],text=True).split()[0]
+          assert current==os.environ['GITHUB_SHA'],'Branch advanced; do not overwrite newer changes'
           paths=json.loads(Path('/tmp/tether-refinement-paths.json').read_text())
           run('git','config','user.name','github-actions[bot]')
           run('git','config','user.email','41898282+github-actions[bot]@users.noreply.github.com')
