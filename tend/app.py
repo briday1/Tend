@@ -97,6 +97,17 @@ def snapshot_svg(start:str,end:str,category:str="",theme:str="sage"):
     except ValueError as exc:raise HTTPException(422,str(exc)) from None
 @app.get("/api/board")
 def board():return db.board()
+@app.get("/api/mentions")
+def mentions():
+    """Real, current link targets for interactive task/category/action references in chat."""
+    tasks=[t for t in db.list_threads() if not t.get("archived_at")]
+    actions=db.query("""SELECT e.id,e.thread_id,e.body,e.done,e.due_at,e.revisit_at
+        FROM entries e JOIN threads t ON t.id=e.thread_id
+        WHERE e.kind='action' AND t.archived_at IS NULL""")
+    return {"categories":sorted({name for t in tasks for name in db.category_names(t)}),
+            "tasks":[{"id":t["id"],"title":t["title"],"categories":t["categories"]} for t in tasks],
+            "actions":actions}
+
 @app.get("/api/threads")
 def threads(q:str=""):return db.list_threads(q)
 @app.get("/api/overview")
