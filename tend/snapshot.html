@@ -76,7 +76,22 @@ function render(data){
  notifyHeight();
 }
 async function load(){try{const monday=new Date();monday.setDate(monday.getDate()-(monday.getDay()+6)%7);const sunday=new Date(monday);sunday.setDate(sunday.getDate()+6);const query=new URLSearchParams({start:params.get('start')||dateOnly(monday),end:params.get('end')||dateOnly(sunday)});if(params.get('category'))query.set('category',params.get('category'));const response=await fetch('/api/snapshot?'+query);if(!response.ok)throw Error('Could not load this calendar');render(await response.json())}catch(e){$('#error').textContent=e.message}}
-async function download(format){if(!last)return;const button=$('#'+format);button.disabled=true;try{const query=new URLSearchParams({start:last.start,end:last.end,theme:document.documentElement.dataset.theme||'sage',scale:'2'});if(last.category)query.set('category',last.category);const response=await fetch('/api/snapshot.'+format+'?'+query);if(!response.ok)throw Error('Download failed');const url=URL.createObjectURL(await response.blob()),a=document.createElement('a');a.href=url;a.download='tend-'+last.start+'-'+last.end+'.'+format;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)}catch(e){$('#error').textContent=e.message}finally{button.disabled=false}}
+function download(format){
+ if(!last){$('#error').textContent='Calendar is still loading. Please try again.';return}
+ const query=new URLSearchParams({start:last.start,end:last.end,theme:document.documentElement.dataset.theme||'sage'});
+ if(format==='png')query.set('scale','2');
+ if(last.category)query.set('category',last.category);
+ // A direct navigation to an attachment endpoint preserves the browser's user
+ // activation. Async fetch -> blob -> synthetic click can be silently blocked,
+ // especially inside an embedded calendar or installed desktop browser window.
+ const link=document.createElement('a');
+ link.href='/api/snapshot.'+format+'?'+query;
+ link.download='tend-'+last.start+'-'+last.end+'.'+format;
+ document.body.append(link);
+ link.click();
+ link.remove();
+ $('#error').textContent='';
+}
 $('#png').onclick=()=>download('png');$('#svg').onclick=()=>download('svg');load();
 </script>
 </html>
