@@ -1,4 +1,4 @@
-name: Release tether
+name: Release tether-chat
 on:
   workflow_dispatch:
   push:
@@ -8,7 +8,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: publish-tether
+  group: publish-tether-chat
   cancel-in-progress: false
 jobs:
   version:
@@ -33,7 +33,7 @@ jobs:
           if os.environ.get('GITHUB_REF_TYPE')=='tag' and os.environ['GITHUB_REF_NAME']!='v'+version:
               raise SystemExit('Release tag must match pyproject.toml version')
           try:
-              with urllib.request.urlopen('https://pypi.org/pypi/tether/'+version+'/json',timeout=30):
+              with urllib.request.urlopen('https://pypi.org/pypi/tether-chat/'+version+'/json',timeout=30):
                   publish='false'
                   print('Version',version,'already exists; nothing will be overwritten.')
           except urllib.error.HTTPError as exc:
@@ -103,7 +103,7 @@ jobs:
             echo "GitHub release $TAG already exists; existing assets are retained."
           else
             printf 'Tested on Windows, macOS, and Linux. Browser interaction and clean installation checks passed.\n\nPyPI publication is part of this workflow; see the publication step for its result.\n' > release-notes.txt
-            gh release create "$TAG" dist/* --target "$GITHUB_SHA" --title "tether $VERSION" --notes-file release-notes.txt
+            gh release create "$TAG" dist/* --target "$GITHUB_SHA" --title "tether-chat $VERSION" --notes-file release-notes.txt
           fi
       - id: upload
         name: Publish with the configured PyPI token
@@ -125,10 +125,10 @@ jobs:
           version=tomllib.loads(Path('pyproject.toml').read_text(encoding='utf-8'))['project']['version']
           for attempt in range(12):
               try:
-                  with urllib.request.urlopen('https://pypi.org/pypi/tether/'+version+'/json',timeout=15) as response:
+                  with urllib.request.urlopen('https://pypi.org/pypi/tether-chat/'+version+'/json',timeout=15) as response:
                       result=json.load(response)
                   assert result['info']['version']==version and result['urls']
-                  print('Confirmed on PyPI: tether',version)
+                  print('Confirmed on PyPI: tether-chat',version)
                   break
               except urllib.error.HTTPError as exc:
                   if exc.code!=404:raise

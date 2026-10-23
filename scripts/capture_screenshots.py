@@ -1,10 +1,10 @@
-"""Generate reproducible Tend UI screenshots from an isolated demo database.
+"""Generate reproducible tether-chat UI screenshots from an isolated demo database.
 
 Install: python -m pip install playwright
          python -m playwright install chromium
 Run:     python scripts/capture_screenshots.py
 
-Only synthetic sample records are used. Never reads the user's Tend database.
+Only synthetic sample records are used. Never reads the user's tether-chat database.
 All screenshot examples use generic Projects, Operations, and Product categories.
 """
 import os

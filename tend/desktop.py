@@ -1,4 +1,4 @@
-"""Windows desktop entry point: start Tether only when needed, then open an app window."""
+"""Windows desktop entry point: start tether-chat only when needed, then open an app window."""
 import json
 import os
 import subprocess
@@ -22,7 +22,7 @@ def healthy():
     try:
         with urlopen(f"http://127.0.0.1:{port()}/api/health",timeout=0.75) as response:
             data=json.load(response)
-            return response.status==200 and data.get("app")=="tend" and data.get("brand")=="tether" and data.get("version")==__version__ and data.get("streaming_chat") is True and data.get("tool_runner")=="unbounded-v2"
+            return response.status==200 and data.get("app")=="tend" and data.get("brand")=="tether-chat" and data.get("version")==__version__ and data.get("streaming_chat") is True and data.get("tool_runner")=="unbounded-v2"
     except (OSError,ValueError,URLError):
         return False
 
@@ -42,7 +42,7 @@ def open_app():
 def show_error(message):
     try:
         import ctypes
-        ctypes.windll.user32.MessageBoxW(None,str(message),"Tether launcher",0x10)
+        ctypes.windll.user32.MessageBoxW(None,str(message),"tether-chat launcher",0x10)
     except Exception:
         pass
 
@@ -51,7 +51,7 @@ def main():
     create_mutex=ctypes.windll.kernel32.CreateMutexW
     create_mutex.restype=ctypes.c_void_p
     create_mutex.argtypes=(ctypes.c_void_p,ctypes.c_int,ctypes.c_wchar_p)
-    mutex=create_mutex(None,False,"Local\\TetherDesktopTray")
+    mutex=create_mutex(None,False,"Local\\tether-chatDesktopTray")
     if not mutex:raise RuntimeError("Could not initialize desktop launcher")
     if ctypes.windll.kernel32.GetLastError()==183:
         # A tray instance already exists; just reopen its application window.
@@ -59,7 +59,7 @@ def main():
             if healthy():break
             time.sleep(.25)
         if healthy():open_app()
-        else:show_error("Tether is still starting or unavailable. Check the tray and server.log.")
+        else:show_error("tether-chat is still starting or unavailable. Check the tray and server.log.")
         ctypes.windll.kernel32.CloseHandle(mutex)
         return
     server=None
@@ -77,7 +77,7 @@ def start_and_open(open_window=True):
             probe.settimeout(.5)
             occupied=probe.connect_ex(("127.0.0.1",port()))==0
         if occupied:
-            raise RuntimeError("An outdated or different server is using Tether's port. Stop that process before launching the new Tether shortcut.")
+            raise RuntimeError("An outdated or different server is using tether-chat's port. Stop that process before launching the new tether-chat shortcut.")
         # Run the console Python interpreter with its console creation suppressed.
         # The supervisor prints progress; pythonw has no stdout and can crash on print().
         py=os.environ.get("TEND_SERVICE_PYTHON",sys.executable)
@@ -95,11 +95,11 @@ def start_and_open(open_window=True):
         for _ in range(120):
             if healthy():break
             if child.poll() is not None:
-                raise RuntimeError("Tether server process exited. Check ~/.tend/server.log")
+                raise RuntimeError("tether-chat server process exited. Check ~/.tend/server.log")
             time.sleep(.25)
         else:
-            log("Tether server failed to become ready; see server.log")
-            raise RuntimeError("Tether did not start; see ~/.tend/server.log")
+            log("tether-chat server failed to become ready; see server.log")
+            raise RuntimeError("tether-chat did not start; see ~/.tend/server.log")
     if open_window:open_app()
     return child if 'child' in locals() else None
 
@@ -112,7 +112,7 @@ def run_tray(server):
     tray_icon=Image.open(io.BytesIO(raster(256))).convert("RGBA")
     def reopen(icon,item):
         if not healthy():
-            show_error("Tether's web server is unavailable. Exit tether and start it again from the desktop shortcut.")
+            show_error("tether-chat's web server is unavailable. Exit tether-chat and start it again from the desktop shortcut.")
         else:
             open_app()
     def quit_tend(icon,item):
@@ -136,10 +136,10 @@ def run_tray(server):
         except Exception as exc:
             log("Unable to stop services cleanly: "+repr(exc))
     menu=pystray.Menu(
-        pystray.MenuItem("Open tether",reopen,default=True),
-        pystray.MenuItem("Exit tether" if server else "Exit tether tray",quit_tend),
+        pystray.MenuItem("Open tether-chat",reopen,default=True),
+        pystray.MenuItem("Exit tether-chat" if server else "Exit tether-chat tray",quit_tend),
     )
-    icon=pystray.Icon("tend",tray_icon,"tether",menu)
+    icon=pystray.Icon("tend",tray_icon,"tether-chat",menu)
     icon.run()
 
 if __name__=="__main__":

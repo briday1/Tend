@@ -14,7 +14,7 @@ from . import storage
 from .rendering import render
 from .ai import reflect
 
-app=FastAPI(title="Tether")
+app=FastAPI(title="tether-chat")
 app.add_middleware(TrustedHostMiddleware,allowed_hosts=["127.0.0.1","localhost","[::1]"])
 db.init()
 class Ask(BaseModel):
@@ -65,7 +65,7 @@ def theme_css():return FileResponse(Path(__file__).with_name("theme.css"),media_
 @app.get("/theme.js")
 def theme_js():return FileResponse(Path(__file__).with_name("theme.js"),media_type="application/javascript")
 @app.get("/api/health")
-def health():return {"app":"tend","brand":"tether","version":__version__,"status":"ok","streaming_chat":True,"board_categories":True,"tool_runner":"unbounded-v2"}
+def health():return {"app":"tend","brand":"tether-chat","version":__version__,"status":"ok","streaming_chat":True,"board_categories":True,"tool_runner":"unbounded-v2"}
 @app.get("/manifest.webmanifest")
 def manifest():return FileResponse(Path(__file__).with_name("manifest.webmanifest"),media_type="application/manifest+json")
 @app.get("/")
@@ -201,14 +201,14 @@ def backup():
     from tempfile import NamedTemporaryFile
     import sqlite3
     import os
-    file=NamedTemporaryFile(prefix="tend-backup-",suffix=".sqlite3",delete=False)
+    file=NamedTemporaryFile(prefix="tether-chat-backup-",suffix=".sqlite3",delete=False)
     file.close()
     try:
         with sqlite3.connect(db.path()) as src, sqlite3.connect(file.name) as dest:src.backup(dest)
     except Exception:
         os.unlink(file.name)
         raise
-    return FileResponse(file.name,filename="tend-backup.sqlite3",media_type="application/octet-stream",
+    return FileResponse(file.name,filename="tether-chat-backup.sqlite3",media_type="application/octet-stream",
                         background=BackgroundTask(os.unlink,file.name))
 
 @app.get("/api/conversation/rendered")
@@ -292,7 +292,7 @@ def chat_stream(data:Message):
                 q.put({"type":"done","answer":result["answer"],"answer_html":render(result["answer"]),"snapshot":result.get("snapshot")})
             except Exception as exc:
                 # Do not send raw provider exceptions or traceback to clients.
-                q.put({"type":"error","message":str(exc) if isinstance(exc,ValueError) else "Assistant request failed. Check Tend server logs."})
+                q.put({"type":"error","message":str(exc) if isinstance(exc,ValueError) else "Assistant request failed. Check tether-chat server logs."})
             finally:q.put(None)
         threading.Thread(target=worker,daemon=True).start()
         while True:

@@ -6,7 +6,7 @@ import sys
 import time
 from pathlib import Path
 
-WINDOW_TITLE='tether'
+WINDOW_TITLE='tether-chat'
 _ICON_HANDLES={}
 _ICON_RESOURCES=[]
 
@@ -51,7 +51,7 @@ def _apply_windows_window_icon(window,icon_file):
         previous=_ICON_HANDLES.get(key)
         if previous and previous[:2]==(width,height):continue
         handle=api.LoadImageW(None,str(icon_file),1,width,height,0x10)
-        if not handle:raise OSError('Windows could not load the tether icon')
+        if not handle:raise OSError('Windows could not load the tether-chat icon')
         api.SendMessageW(hwnd,0x0080,kind,handle)
         _ICON_HANDLES[key]=(width,height,handle)
         # Only release handles created by us, never icons owned by WinForms.
@@ -86,8 +86,8 @@ def _run():
     kernel.CreateMutexW.restype=ctypes.c_void_p
     kernel.CreateMutexW.argtypes=[ctypes.c_void_p,ctypes.c_int,ctypes.c_wchar_p]
     kernel.CloseHandle.argtypes=[ctypes.c_void_p]
-    mutex=kernel.CreateMutexW(None,False,'Local\\TetherNativeDesktop')
-    if not mutex:raise RuntimeError('Could not create the tether desktop lock')
+    mutex=kernel.CreateMutexW(None,False,'Local\\tether-chatNativeDesktop')
+    if not mutex:raise RuntimeError('Could not create the tether-chat desktop lock')
     if kernel.GetLastError()==183:
         try:
             for _ in range(40):
@@ -103,9 +103,9 @@ def _run():
         if getattr(sys,'frozen',False):
             root=py.absolute().parent.parent
             py=root/'.venv'/'Scripts'/'python.exe'
-            if not py.is_file():raise RuntimeError('Reinstall the optional native build or use tether-desktop from a Python installation.')
+            if not py.is_file():raise RuntimeError('Reinstall the optional native build or use tether-chat-desktop from a Python installation.')
         os.environ['TEND_SERVICE_PYTHON']=str(py)
-        icon_file=create_icon(Path.home()/'.tend'/'icons'/'tether-horizon-v3.ico')
+        icon_file=create_icon(Path.home()/'.tend'/'icons'/'tether-chat-horizon-v3.ico')
         supervisor=desktop.start_and_open(open_window=False)
         window=webview.create_window(WINDOW_TITLE,f'http://127.0.0.1:{desktop.port()}/',
             width=1180,height=780,min_size=(620,450),background_color='#f5f5f5',text_select=True)
@@ -141,8 +141,8 @@ def _run():
             nonlocal exiting
             exiting=True;icon.stop();window.destroy()
 
-        tray=pystray.Icon('tether',Image.open(io.BytesIO(raster(256))).convert('RGBA'),'tether',
-            pystray.Menu(pystray.MenuItem('Open tether',reopen,default=True),pystray.MenuItem('Exit tether',exit_app)))
+        tray=pystray.Icon('tether-chat',Image.open(io.BytesIO(raster(256))).convert('RGBA'),'tether-chat',
+            pystray.Menu(pystray.MenuItem('Open tether-chat',reopen,default=True),pystray.MenuItem('Exit tether-chat',exit_app)))
         tray.run_detached()
         webview.start(gui='edgechromium',debug=False,private_mode=False,storage_path=str(Path.home()/'.tend'/'webview'))
     finally:
@@ -162,14 +162,14 @@ def _run():
 
 def main():
     import argparse
-    parser=argparse.ArgumentParser(prog='tether-desktop',description='Launch tether with a persistent system tray.')
+    parser=argparse.ArgumentParser(prog='tether-chat-desktop',description='Launch tether-chat with a persistent system tray.')
     parser.parse_args()
     try:_run()
     except KeyboardInterrupt:pass
     except Exception as exc:
         from .desktop import log,show_error
         message=str(exc)
-        if isinstance(exc,ImportError):message+='\nInstall the desktop extra: uv tool install "tether[desktop]"'
+        if isinstance(exc,ImportError):message+='\nInstall the desktop extra: uv tool install "tether-chat[desktop]"'
         log('Desktop launcher: '+repr(exc));show_error(message+'\n\nSee ~/.tend/desktop-launch.log')
         if sys.stderr:print(message,file=sys.stderr)
         raise SystemExit(1) from exc

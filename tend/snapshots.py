@@ -1,4 +1,4 @@
-"""Deterministic Tend calendar snapshot aggregation (no AI calls)."""
+"""Deterministic tether-chat calendar snapshot aggregation (no AI calls)."""
 from collections import Counter, defaultdict
 from datetime import date, timedelta
 from . import store as db

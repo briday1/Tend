@@ -11,8 +11,9 @@ ROOT=Path(__file__).resolve().parents[1]
 
 def test_exact_public_commands_and_core_pillow():
     project=tomllib.loads((ROOT/'pyproject.toml').read_text(encoding='utf-8'))['project']
-    assert set(project['scripts'])=={'tether'}
-    assert set(project['gui-scripts'])=={'tether-desktop'}
+    assert project['name']=='tether-chat'
+    assert set(project['scripts'])=={'tether-chat'}
+    assert set(project['gui-scripts'])=={'tether-chat-desktop'}
     assert any(s.lower().startswith('pillow') and ';' not in s for s in project['dependencies'])
     assert not any(s.lower().startswith(('pystray','pywebview')) for s in project['dependencies'])
     from tend import __version__
@@ -22,14 +23,14 @@ def test_exact_public_commands_and_core_pillow():
 def test_header_brand_and_shared_drawer_styles():
     for name in ('index.html','board.html'):
         page=(ROOT/'tend'/name).read_text(encoding='utf-8')
-        assert '<span class="brand-word">tether<span>.</span></span>' in page
+        assert '<span class="brand-word">tether-chat<span>.</span></span>' in page
         assert '<span class="brand-word">tend' not in page
     css=(ROOT/'tend/theme.css').read_text(encoding='utf-8')
     assert '.reference-drawer,.action-drawer{position:fixed;' in css
     assert '#board:has(.actions-section){grid-template-columns:' in css
     assert '.bubble.assistant a{color:var(--accent)!important}' in css
     from tend.native import WINDOW_TITLE
-    assert WINDOW_TITLE=='tether'
+    assert WINDOW_TITLE=='tether-chat'
 
 
 def test_icons_have_all_dpi_sizes_and_unclipped_alpha(tmp_path):
@@ -69,7 +70,7 @@ def test_windows_assigns_icons_to_actual_window_handle(tmp_path):
     api.CreateWindowExW.argtypes=[ctypes.c_ulong,ctypes.c_wchar_p,ctypes.c_wchar_p,ctypes.c_ulong,ctypes.c_int,ctypes.c_int,ctypes.c_int,ctypes.c_int,ctypes.c_void_p,ctypes.c_void_p,ctypes.c_void_p,ctypes.c_void_p]
     api.CreateWindowExW.restype=ctypes.c_void_p
     api.DestroyWindow.argtypes=[ctypes.c_void_p]
-    hwnd=api.CreateWindowExW(0,'STATIC','tether icon regression',0,0,0,320,200,None,None,None,None)
+    hwnd=api.CreateWindowExW(0,'STATIC','tether-chat icon regression',0,0,0,320,200,None,None,None,None)
     assert hwnd
     window=SimpleNamespace(native=SimpleNamespace(Handle=SimpleNamespace(ToInt64=lambda:hwnd)))
     try:

@@ -40,7 +40,7 @@ def main():
     parser=argparse.ArgumentParser();parser.add_argument('--mock-api',action='store_true');args=parser.parse_args()
     from playwright.sync_api import sync_playwright,expect
     out=ROOT/'docs'/'screenshots';out.mkdir(parents=True,exist_ok=True)
-    with tempfile.TemporaryDirectory(prefix='tether-ui-') as temp:
+    with tempfile.TemporaryDirectory(prefix='tether-chat-ui-') as temp:
         folder=Path(temp);task_id,action_id,sibling_id=seed(folder)
         from tend import store
         server=None;base='http://127.0.0.1:18767'
@@ -80,8 +80,8 @@ def main():
                     page.route('**/*',route)
                 else:page.route('**/api/attention*',lambda route:route.fulfill(status=200,content_type='application/json',body='{"items":[]}'))
                 page.goto(base+'/',wait_until='networkidle')
-                expect(page.locator('.brand-word')).to_have_text('tether.')
-                assert page.title()=='tether'
+                expect(page.locator('.brand-word')).to_have_text('tether-chat.')
+                assert page.title()=='tether-chat'
                 assert page.locator('#chatCategories').count()==0
                 category=page.locator('#chat a.chat-reference').filter(has_text='Projects')
                 expect(category).to_have_count(1)
@@ -104,7 +104,7 @@ def main():
                 assert page.url==base+'/'
                 page.keyboard.press('Escape')
                 page.goto(base+'/board',wait_until='networkidle')
-                expect(page.locator('.brand-word')).to_have_text('tether.')
+                expect(page.locator('.brand-word')).to_have_text('tether-chat.')
                 page.locator('.task-row').filter(has_text='Prepare briefing').click()
                 expect(page.locator('.action-list-row')).to_have_count(2)
                 bounds=[page.locator(s).bounding_box() for s in ['.category-section','.task-section','.actions-section']]

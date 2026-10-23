@@ -137,7 +137,7 @@ def _run(path, job_id):
                        (json.dumps(result), assistant_id, stamp, job_id))
     except Exception as exc:
         _LOG.exception('Chat request %s failed', job_id)
-        error = str(exc) if isinstance(exc, ValueError) else 'The assistant request failed. Check tether server logs.'
+        error = str(exc) if isinstance(exc, ValueError) else 'The assistant request failed. Check tether-chat server logs.'
         with connection(path) as db:
             db.execute("UPDATE chat_jobs SET status='error',error=?,updated_at=? WHERE id=?", (error, now(), job_id))
 
