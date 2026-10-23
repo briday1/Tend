@@ -7,6 +7,7 @@ import time
 from pathlib import Path
 
 def _existing_window():
+    ctypes.windll.user32.FindWindowW.restype=ctypes.c_void_p
     hwnd=ctypes.windll.user32.FindWindowW(None,"Tether")
     if hwnd:
         ctypes.windll.user32.ShowWindow(hwnd,9)
@@ -25,6 +26,8 @@ def _apply_windows_window_icon():
     user32.LoadImageW.argtypes=[ctypes.c_void_p,ctypes.c_wchar_p,ctypes.c_uint,ctypes.c_int,ctypes.c_int,ctypes.c_uint]
     user32.SendMessageW.restype=ctypes.c_ssize_t
     user32.SendMessageW.argtypes=[ctypes.c_void_p,ctypes.c_uint,ctypes.c_size_t,ctypes.c_ssize_t]
+    user32.FindWindowW.restype=ctypes.c_void_p
+    user32.FindWindowW.argtypes=[ctypes.c_wchar_p,ctypes.c_wchar_p]
     hwnd=user32.FindWindowW(None,"Tether")
     if not hwnd:
         desktop_error="Tether window was not found for icon assignment"
