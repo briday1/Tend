@@ -78,12 +78,12 @@ jobs:
           import json,subprocess
           from pathlib import Path
           run=lambda *a:subprocess.run(a,check=True)
-          paths=json.loads(Path('/tmp/tether-repair-paths.json').read_text())
+          paths=[p for p in json.loads(Path('/tmp/tether-repair-paths.json').read_text()) if not p.startswith('.github/workflows/')]
           run('git','config','user.name','github-actions[bot]')
           run('git','config','user.email','41898282+github-actions[bot]@users.noreply.github.com')
           run('git','add','--',*paths)
           screenshots=[str(p) for p in Path('docs/screenshots').glob('*.png')]
           if screenshots:run('git','add','--',*screenshots)
-          run('git','rm','-r','.github/repair','.github/workflows/apply-release-fix.yml')
+          run('git','rm','-r','.github/repair')
           run('git','commit','-m','Fix tether release: verified packaging, branding, native icons and interactive UI')
           run('git','push','origin','HEAD:fix/tether-release-022')
