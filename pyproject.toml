@@ -3,9 +3,9 @@ requires = ["setuptools>=69"]
 build-backend = "setuptools.build_meta"
 
 [project]
-# Public package name; the application displays tether.
+# Distribution name; the application displays tether.
 name = "tether-chat"
-version = "2026.4"
+version = "2026.5"
 description = "Local-first task and action-item assistant"
 readme = "README.md"
 requires-python = ">=3.11"
