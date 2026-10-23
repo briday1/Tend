@@ -52,11 +52,11 @@ def install(destination=None):
         subprocess.run(["powershell","-NoProfile","-NonInteractive","-Command",script],check=True)
     elif sys.platform=="darwin":
         path=folder/"Tether.command"
-        path.write_text("#!/bin/sh\\nexec "+shlex.quote(python)+" -m tend.cli serve\\n",encoding="utf-8")
+        path.write_text("#!/bin/sh\nexec "+shlex.quote(python)+" -m tend.cli serve\n",encoding="utf-8")
         path.chmod(0o755)
     else:
         path=folder/"Tether.desktop"
         exec_line=shlex.quote(python)+" -m tend.cli serve"
-        path.write_text("[Desktop Entry]\\nType=Application\\nName=Tether\\nComment=Local task assistant\\nExec="+exec_line+"\\nTerminal=true\\nCategories=Office;Utility;\\n",encoding="utf-8")
+        path.write_text("[Desktop Entry]\nType=Application\nName=Tether\nComment=Local task assistant\nExec="+exec_line+"\nTerminal=true\nCategories=Office;Utility;\n",encoding="utf-8")
         path.chmod(0o755)
     return path
