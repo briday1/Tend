@@ -85,7 +85,7 @@ def main():
                     page.get_by_role('link',name='Conversation',exact=True).click()
                 page.goto(BASE+'/board',wait_until='networkidle');page.locator('.task-row').filter(has_text='Prepare briefing').click()
                 edit=page.locator('.edit-task-button');expect(edit).to_be_visible();assert edit.bounding_box()['height']<=32
-                page.locator('.action-list-row').first.click();close=page.locator('#actionDrawer .reference-close');assert close.bounding_box()['width']<=30 and close.bounding_box()['height']<=30
+                page.locator('.action-list-row').first.click();close=page.locator('#actionDrawer .reference-close');assert close.bounding_box()['width']==38 and close.bounding_box()['height']==38;expect(close.locator('svg')).to_be_visible()
                 # Notes saved in Tasks appear only on that action in Conversation.
                 drawer=page.locator('#actionDrawer')
                 drawer.get_by_label('Add action note',exact=True).fill('Spoke with the reviewer; awaiting confirmation.')
