@@ -42,13 +42,16 @@ def install(destination=None):
     python=str(Path(sys.executable).resolve())
     if sys.platform=="win32":
         # A real Windows shortcut, rather than a shortcut to a repo-specific exe.
+        from .windows_icon import create_icon
+        icon_file=Path.home()/".tend"/"tether-desktop.ico"
+        create_icon(icon_file)
         path=folder/"Tether.lnk"
         escape=lambda s:s.replace("'","''")
         script=("$s=(New-Object -ComObject WScript.Shell).CreateShortcut('"+escape(str(path))+"');"
                 +"$s.TargetPath='"+escape(python)+"';"
                 +"$s.Arguments='-m tend.native';"
                 +"$s.WorkingDirectory='"+escape(str(Path.home()))+"';"
-                +"$s.Description='Open Tether';$s.Save()")
+                +"$s.Description='Open Tether';$s.IconLocation='"+escape(str(icon_file))+"';$s.Save()")
         subprocess.run(["powershell","-NoProfile","-NonInteractive","-Command",script],check=True)
     elif sys.platform=="darwin":
         path=folder/"Tether.command"
