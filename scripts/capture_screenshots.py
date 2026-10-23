@@ -28,7 +28,7 @@ def make_demo(db):
     store.init()
     report = store.create("Weekly activity report", "Summarize recent Projects.")
     store.update(report["id"], {
-        "category": "Projects", "recurrence": "weekly",
+        "categories": ["Projects","Operations"], "recurrence": "weekly",
         "next_occurrence": "2027-01-08T17:00:00+00:00",
         "due_action": "activity_report",
         "action_prompt": "Summarize the week's recorded project activity.",
@@ -52,9 +52,10 @@ def make_demo(db):
     for title,cat,offset in [("Prepare briefing notes","Projects",0),("Investigate dashboard bug","Product",2),("Renew development certificate","Operations",4)]:
         matches=[t for t in store.list_threads() if t["title"]==title]
         if matches:store.update(matches[0]["id"],{"due_at":(next_monday+timedelta(days=offset)).isoformat()+"T12:00:00Z"})
-    from tend.snapshot_intent import respond
-    store.remember("user","give me my next week snapshot")
-    store.remember("assistant",respond("give me my next week snapshot")["answer"])
+    for title,categories,offset in [("Plan monthly review",["Operations","Projects"],1),
+                                    ("Review project milestones",["Projects","Product"],3)]:
+        task=next(t for t in store.list_threads() if t["title"]==title)
+        store.update(task["id"],{"categories":categories,"due_at":(next_monday+timedelta(days=offset)).isoformat()+"T12:00:00Z"})
     store.remember("user", "What needs my attention this week?")
     store.remember("assistant", "There are a few active items in **Projects** and **Operations**. The weekly activity report is scheduled, and milestone review is waiting on input.")
     return report["id"]
@@ -102,11 +103,12 @@ def main():
                     status=200, content_type="application/json",
                     body='{"items":[],"source":"demo"}'))
                 page.goto(base + "/", wait_until="networkidle")
-                page.locator(".snapshot-frame").first.wait_for()
                 page.locator("#message").fill("give me my next week snapshot")
                 page.locator("#composer").evaluate("(form) => form.requestSubmit()")
-                page.locator(".snapshot-frame").nth(1).wait_for(timeout=15000)
+                page.locator(".snapshot-frame").first.wait_for(timeout=15000)
                 page.locator(".snapshot-frame").last.content_frame.locator(".day").first.wait_for()
+                page.wait_for_function("""() => [...document.querySelectorAll('.snapshot-frame')].every(f =>
+                    Math.abs(f.getBoundingClientRect().height-f.contentDocument.querySelector('.shell').getBoundingClientRect().height)<2)""")
                 page.screenshot(path=str(OUT / "conversation.png"), full_page=True)
                 week_start=date.today()+timedelta(days=7-date.today().weekday())
                 week_end=week_start+timedelta(days=6)
@@ -114,7 +116,10 @@ def main():
                 page.locator(".day").first.wait_for()
                 assert page.locator("#weekdays span").all_text_contents() == ["Mon", "Tue", "Wed", "Thu", "Fri"], "Empty weekends must be hidden"
                 assert page.locator(".summary, .stat, .eyebrow").count() == 0, "Snapshot must not include summary cards"
-                page.screenshot(path=str(OUT / "snapshot-week.png"), full_page=True)
+                assert page.locator('input,select').count()==0, "Calendars must be read-only"
+                assert page.locator('.day').count()==5
+                assert page.locator('.task').filter(has_text='Plan monthly review').locator('.task-category').all_text_contents()==['Operations','Projects']
+                page.locator('.shell').screenshot(path=str(OUT / "snapshot-week.png"))
                 month_start=week_start.replace(day=1)
                 following=(month_start.replace(year=month_start.year+1,month=1)
                            if month_start.month==12 else month_start.replace(month=month_start.month+1))
@@ -122,20 +127,53 @@ def main():
                 page.goto(base + "/snapshots?start="+month_start.isoformat()+"&end="+month_end.isoformat(), wait_until="networkidle")
                 page.locator(".day").first.wait_for()
                 assert page.locator("#weekdays span").all_text_contents() == ["Mon", "Tue", "Wed", "Thu", "Fri"]
-                page.screenshot(path=str(OUT / "snapshot-month.png"), full_page=True)
+                month_height=page.locator('.shell').bounding_box()['height']
+                page.locator('.shell').screenshot(path=str(OUT / "snapshot-month.png"))
                 page.goto(base + "/snapshots?start="+week_start.isoformat()+"&end="+week_end.isoformat(), wait_until="networkidle")
                 with page.expect_download() as download_info:
                     page.locator("#png").click()
                 assert download_info.value.suggested_filename.endswith(".png")
+                assert page.locator('.shell').bounding_box()['height']<month_height, "Week and month must size independently"
+                with page.expect_download() as svg_download:
+                    page.locator('#svg').click()
+                assert svg_download.value.suggested_filename.endswith('.svg')
+                page.locator('.task').first.click()
+                page.locator('#details:not([hidden])').wait_for()
+                assert page.locator('#details input,#details textarea').count()==0
+                page.keyboard.press('Escape')
                 page.goto(base + "/board", wait_until="networkidle")
                 page.locator(".task-row").first.wait_for()
+                assert page.locator('.task-row').count()==7, "Multi-category tasks must not create duplicate rows"
+                assert page.locator('.task-section h2').inner_text()=='All Tasks (7)'
                 page.screenshot(path=str(OUT / "tasks.png"), full_page=True)
                 page.locator(".task-row").filter(has_text="Weekly activity report").click()
                 page.locator("#panel:not(.hidden)").wait_for()
+                # Check adding and removing a membership through the actual editor.
+                page.locator('#category').fill('Review')
+                page.locator('#category').press('Enter')
+                page.locator('#edit').evaluate('(form)=>form.requestSubmit()')
+                page.wait_for_function("""() => document.querySelector('#category-tags').textContent.includes('Review')
+                    && document.querySelector('.category-rows').textContent.includes('Review')""")
+                page.locator('#category-tags button[aria-label="Remove Review"]').click()
+                page.locator('#edit').evaluate('(form)=>form.requestSubmit()')
+                page.wait_for_function("() => !document.querySelector('.category-rows').textContent.includes('Review')")
                 page.screenshot(path=str(OUT / "task-details.png"), full_page=True)
                 page.locator("#close").click()
                 page.locator(".archive-switch").click()
                 page.screenshot(path=str(OUT / "archive.png"), full_page=True)
+                # Exercise the embedded calendar on a phone as well as desktop.
+                page.set_viewport_size({'width':390,'height':844})
+                page.goto(base+'/',wait_until='networkidle')
+                frame=page.locator('.snapshot-frame').last
+                frame.content_frame.locator('.task').first.wait_for()
+                page.wait_for_function("""() => [...document.querySelectorAll('.snapshot-frame')].every(f =>
+                    Math.abs(f.getBoundingClientRect().height-f.contentDocument.querySelector('.shell').getBoundingClientRect().height)<2)""")
+                assert frame.content_frame.locator('body').evaluate('(body)=>body.scrollWidth<=innerWidth'), 'Mobile snapshot must fit its frame'
+                assert page.locator('body').evaluate('(body)=>body.scrollWidth<=innerWidth'), 'Chat must fit a phone'
+                composer=page.locator('#composer').bounding_box()
+                assert composer['y']+composer['height']<=845, 'The mobile message composer must stay visible'
+                page.screenshot(path=str(OUT/'conversation-mobile.png'),full_page=True)
+                frame.screenshot(path=str(OUT/'snapshot-mobile.png'))
                 browser.close()
             print("Created:", ", ".join(p.name for p in sorted(OUT.glob("*.png"))))
         finally:

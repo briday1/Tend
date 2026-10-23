@@ -46,12 +46,8 @@ def respond(message,today=None):
     dates=resolve(message,today)
     if dates is None:return None
     start,end=dates
-    data=snapshot(start,end)
+    snapshot(start,end)  # Validate and keep errors deterministic, without a provider request.
     p=urlencode({"start":start,"end":end})
     link="/snapshots?"+p
-    stats=data["insights"]
-    return {"answer":f"### Your snapshot · {start} — {end}\n\n"
-             f"**{stats['scheduled_due']}** tasks due · **{stats['activity_events']}** activity events · **{stats['active_days']}** active days.\n\n"
-             f"[Open interactive snapshot]({link}) · Export PNG or SVG from the snapshot.\n\n"
-             f"*Due dates reflect current task records; historical status isn't reconstructed.*",
+    return {"answer":f"[Calendar · {start} — {end}]({link})",
             "snapshot":{"start":start,"end":end,"url":link}}

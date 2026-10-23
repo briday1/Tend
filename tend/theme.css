@@ -53,3 +53,11 @@ body{background:var(--page)!important;color:var(--text)!important}header,.main,.
 .settings #closeSettings:focus-visible,
 .settings #browseDatabase:focus-visible{outline:2px solid var(--accent)!important;outline-offset:2px}
 .settings #browseDatabase:disabled{opacity:.55;cursor:wait}
+
+@media(max-width:650px){
+  .topnav{gap:6px!important;padding:0 10px!important}
+  .topnav .brand{width:auto!important;flex:0 0 auto!important;margin-right:2px!important;font-size:23px!important}
+  .topnav a{min-width:0!important;padding:0 9px!important;font-size:13px}
+  .topnav .settings-gear{width:34px;height:34px;flex-shrink:0}
+}
+@media(max-width:360px){.topnav .brand .brand-word{display:none!important}.topnav a{padding:0 8px!important}}

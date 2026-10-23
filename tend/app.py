@@ -21,10 +21,12 @@ class Ask(BaseModel):
 class Thread(BaseModel):
     title:str=Field(min_length=1,max_length=300)
     summary:str=""
+    categories:list[str]|None=Field(default=None,max_length=20)
 class Change(BaseModel):
     title:str|None=None
     summary:str|None=None
     category:str|None=None
+    categories:list[str]|None=Field(default=None,max_length=20)
     state:Literal["open","waiting","paused","settled"]|None=None
     revisit_at:datetime|None=None
     due_at:datetime|None=None
@@ -83,6 +85,12 @@ def snapshot_png(start:str,end:str,category:str="",theme:str="sage",scale:int=2)
 
 @app.get("/board")
 def board_page():return FileResponse(Path(__file__).with_name("board.html"))
+@app.get("/api/snapshot.svg")
+def snapshot_svg(start:str,end:str,category:str="",theme:str="sage"):
+    from .snapshot_export import svg
+    try:return Response(svg(start,end,category,theme),media_type="image/svg+xml",
+                        headers={"Content-Disposition":"attachment; filename=tend-snapshot.svg","Cache-Control":"no-store"})
+    except ValueError as exc:raise HTTPException(422,str(exc)) from None
 @app.get("/api/board")
 def board():return db.board()
 @app.get("/api/threads")
@@ -90,7 +98,9 @@ def threads(q:str=""):return db.list_threads(q)
 @app.get("/api/overview")
 def overview():return db.overview()
 @app.post("/api/threads",status_code=201)
-def create(data:Thread):return db.create(data.title,data.summary)
+def create(data:Thread):
+    try:return db.create(data.title,data.summary,data.categories)
+    except ValueError as exc:raise HTTPException(422,str(exc)) from None
 @app.get("/api/threads/{id}")
 def get(id:str):return found(db.get(id))
 @app.patch("/api/threads/{id}")
@@ -98,7 +108,8 @@ def change(id:str,data:Change):
     fields=data.model_dump(exclude_unset=True)
     for field in ("revisit_at","due_at","next_occurrence"):
         if fields.get(field):fields[field]=fields[field].isoformat()
-    return found(db.update(id,fields))
+    try:return found(db.update(id,fields))
+    except ValueError as exc:raise HTTPException(422,str(exc)) from None
 @app.get("/api/threads/{id}/due-action")
 def thread_due_action(id:str):
     """Preview the configured task action; never invokes paid AI."""

@@ -7,7 +7,7 @@ from tend.app import app
 def client(tmp_path,monkeypatch):
     monkeypatch.setenv("TEND_DB",str(tmp_path/"test.sqlite3"))
     store.init()
-    return TestClient(app)
+    return TestClient(app,base_url="http://127.0.0.1")
 
 def test_capture_search_revisit_and_delete(client):
     t=client.post("/api/threads",json={"title":"Think about this"}).json()

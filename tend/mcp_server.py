@@ -6,9 +6,14 @@ from . import store as db
 mcp=FastMCP("Tend",host="127.0.0.1",port=int(os.environ.get("TEND_MCP_PORT","8766")))
 @mcp.tool()
 def get_snapshot(start:str,end:str,category:str="")->dict:
-    """Get a deterministic calendar snapshot for inclusive ISO dates, with category insights and task deep links. Export in the Tend Snapshots UI."""
+    """Get a read-only calendar for inclusive ISO dates. Each task appears once and carries all categories. A category filter matches any membership; category counts can overlap. Embed the view URL in chat on request; PNG/SVG download URLs need no AI generation."""
     from .snapshots import snapshot
-    return snapshot(start,end,category)
+    from urllib.parse import urlencode
+    data=snapshot(start,end,category)
+    query=urlencode({"start":start,"end":end,**({"category":category} if category else {})})
+    data["view_url"]="/snapshots?"+query
+    data["downloads"]={format:"/api/snapshot."+format+"?"+query for format in ("png","svg")}
+    return data
 @mcp.tool()
 def task_link(thread_id:str)->dict:
     """Return a clickable local Tend task link, suitable for rich text or fallback navigation."""
@@ -28,7 +33,7 @@ def due_reminders()->list[dict]:
     return db.overview()["due"]
 @mcp.tool()
 def categories()->list[dict]:
-    """Show categorized board groups."""
+    """Show category groups. A task may belong to several groups; deduplicate by id for overall counts."""
     return db.board()
 @mcp.tool()
 def find_threads(query:str="")->list[dict]:
@@ -39,9 +44,9 @@ def explore_thread(thread_id:str)->dict:
     """See full context, chronology, and relationships for a thread."""
     return db.get(thread_id) or {"error":"Thread not found"}
 @mcp.tool()
-def capture_thought(title:str,summary:str="")->dict:
-    """Capture an idea, concern, intention, or other open loop."""
-    return db.create(title,summary)
+def capture_thought(title:str,summary:str="",categories:list[str]|None=None)->dict:
+    """Capture one task, optionally in several categories. Do not create a copy for each category."""
+    return db.create(title,summary,categories)
 @mcp.tool()
 def add_to_thread(thread_id:str,text:str,kind:str="thought")->dict:
     """Add an observation, question, action, decision, or update."""
@@ -61,8 +66,12 @@ def relate_threads(first_id:str,second_id:str)->dict:
     return {"linked":db.link(first_id,second_id)}
 @mcp.tool()
 def change_category(thread_id:str,category:str)->dict:
-    """Move a tracked thought to a named category."""
+    """Replace all memberships with one category. For additional memberships use set_task_categories(mode='add')."""
     return db.update(thread_id,{"category":category}) or {"error":"Thread not found"}
+@mcp.tool()
+def set_task_categories(thread_id:str,categories:list[str],mode:str="replace")->dict:
+    """Set several categories on one task. mode='add' preserves existing categories, 'remove' removes only named memberships, and 'replace' sets the whole list. An empty replacement resets to Unsorted. Returned categories lists every membership."""
+    return db.set_categories(thread_id,categories,mode) or {"error":"Thread not found"}
 @mcp.tool()
 def log_activity(thread_id:str,text:str,kind:str="progress",occurred_at:str="")->dict:
     """Log work or feedback with optional ISO 8601 occurrence timestamp."""

@@ -10,7 +10,7 @@ The screenshots below use example data, not anyone's personal tasks. They are ge
 
 ![Tend conversation](docs/screenshots/conversation.png)
 
-**Interactive calendar snapshot (synthetic example data)**
+**Calendar requested in chat (synthetic example data)**
 
 ![Tend calendar snapshot in a compact Outlook-style weekday calendar](docs/screenshots/snapshot-week.png)
 
@@ -19,6 +19,10 @@ The screenshots below use example data, not anyone's personal tasks. They are ge
 ![Tend month snapshot with category-colored task entries](docs/screenshots/snapshot-month.png)
 
 The conversation view above also shows a real embedded snapshot generated from local task data—not an AI-created image. You can request it naturally with `give me my next week snapshot` or `/snapshot last month`.
+
+**On a phone**
+
+<img src="docs/screenshots/snapshot-mobile.png" alt="Compact phone calendar with readable day rows and multiple category labels" width="390">
 
 **Tasks**
 
@@ -57,7 +61,7 @@ Open **Settings → AI connection**. Enter your provider's HTTPS API base URL, m
 ## Using Tend
 
 - **Conversation:** Describe things to remember, ask what's outstanding, or tell Tend when something changes.
-- **Tasks:** Select a category, search tasks, change statuses and dates, or log activity.
+- **Tasks:** Select a category, search tasks, change statuses and dates, or log activity. A task can belong to several categories; it appears once in **All Tasks** and in each matching category.
 - **Reminders and recurring tasks:** Set *Bring to attention* and repeating schedules. A task can also have a linked activity-report action.
 - **Archive:** Put finished or inactive tasks away without deleting them; restore them later.
 - **MCP:** Other trusted local tools can access the same Tend data through `http://127.0.0.1:8766/mcp`.
@@ -70,9 +74,9 @@ For ordinary Tend updates, choose **Exit Tend** from the system tray, then run `
 
 ## Calendar snapshots and AI skill
 
-Open **Snapshots** in Tend to view real due dates and logged activity over a chosen date range. Click a task to inspect it, or export a deterministic, theme-aware PNG (1×, 2×, 4×) or SVG. Historical task states are not reconstructed from current values.
+Ask for a calendar in Conversation, for example `give me my next week snapshot` or `/snapshot last month`. The response contains a compact calendar that fits its own content. Click a task for read-only details; use **PNG** or **SVG** to download it. Change tasks in **Tasks** or by chatting with Tend. Monday–Friday stay visible; weekends appear when they contain tasks or recorded activity. Historical task states are not reconstructed from current values.
 
-The repository includes a natural-language [`/snapshot` agent skill](skills/tend-snapshot/SKILL.md) for compatible skill-capable AI clients. Install/register that skill in your AI client separately; adding a file to this repository does **not** automatically register a slash command in every AI application. The Tend MCP server exposes `get_snapshot` and `task_link` tools. Example skill prompts: `/snapshot how did last week go?`, `/snapshot next two weeks for WriteShape`, `/snapshot last month as PNG at 4x`.
+The repository includes a natural-language [`/snapshot` agent skill](skills/tend-snapshot/SKILL.md) for compatible AI clients. Register that skill in your AI client separately. Tend's MCP tools return all category memberships, calendar links, and PNG/SVG download links. Use `set_task_categories` to add, remove, or replace memberships. Category filters match any membership; overall counts use unique tasks. PNG downloads default to 2×; the API also supports 1× and 4×.
 
 ## More information
 

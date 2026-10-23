@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS entries(id TEXT PRIMARY KEY,thread_id TEXT NOT NULL R
 CREATE TABLE IF NOT EXISTS relations(a TEXT NOT NULL REFERENCES threads(id) ON DELETE CASCADE,b TEXT NOT NULL REFERENCES threads(id) ON DELETE CASCADE,PRIMARY KEY(a,b));
 CREATE TABLE IF NOT EXISTS conversation(id TEXT PRIMARY KEY,role TEXT NOT NULL,body TEXT NOT NULL,created_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS activity(id TEXT PRIMARY KEY,thread_id TEXT NOT NULL REFERENCES threads(id) ON DELETE CASCADE,kind TEXT NOT NULL,body TEXT NOT NULL,occurred_at TEXT NOT NULL,recorded_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS thread_categories(thread_id TEXT NOT NULL REFERENCES threads(id) ON DELETE CASCADE,name TEXT NOT NULL,position INTEGER NOT NULL,PRIMARY KEY(thread_id,name));
 """)
         columns={row[1] for row in c.execute("PRAGMA table_info(threads)")}
         if "category" not in columns:c.execute("ALTER TABLE threads ADD COLUMN category TEXT NOT NULL DEFAULT 'Unsorted'")
@@ -34,17 +35,39 @@ CREATE TABLE IF NOT EXISTS activity(id TEXT PRIMARY KEY,thread_id TEXT NOT NULL 
         if "recurring_notified_for" not in columns:c.execute("ALTER TABLE threads ADD COLUMN recurring_notified_for TEXT")
         if "action_prompt" not in columns:c.execute("ALTER TABLE threads ADD COLUMN action_prompt TEXT")
         if "archived_at" not in columns:c.execute("ALTER TABLE threads ADD COLUMN archived_at TEXT")
+        # Existing single-category records migrate once; subsequent starts preserve memberships.
+        c.execute("""INSERT INTO thread_categories(thread_id,name,position)
+                     SELECT id,category,0 FROM threads t
+                     WHERE NOT EXISTS(SELECT 1 FROM thread_categories tc WHERE tc.thread_id=t.id)""")
 def query(sql,args=()):
     with conn() as c: return [dict(r) for r in c.execute(sql,args)]
+def normalize_categories(names):
+    if not isinstance(names,list) or len(names)>20:raise ValueError("Use a list of at most 20 categories")
+    result=[];seen=set()
+    for name in names:
+        if not isinstance(name,str) or not name.strip() or len(name.strip())>80:raise ValueError("Invalid category")
+        name=name.strip()
+        if name.casefold() not in seen:result.append(name);seen.add(name.casefold())
+    if len(result)>1:result=[name for name in result if name.casefold()!="unsorted"]
+    return result or ["Unsorted"]
+def category_names(thread):
+    return thread.get("categories") or [thread.get("category") or "Unsorted"]
+def with_categories(rows,key="id"):
+    if not rows:return rows
+    memberships={}
+    for row in query("SELECT thread_id,name FROM thread_categories ORDER BY position,name"):
+        memberships.setdefault(row["thread_id"],[]).append(row["name"])
+    for row in rows:row["categories"]=memberships.get(row[key],[row.get("category") or "Unsorted"])
+    return rows
 def get(id):
-    rows=query("SELECT * FROM threads WHERE id=?",(id,))
+    rows=with_categories(query("SELECT * FROM threads WHERE id=?",(id,)))
     if not rows:return None
     t=rows[0];t["action_config"]=json.loads(t["action_config"] or "{}");t["entries"]=query("SELECT * FROM entries WHERE thread_id=? ORDER BY created_at,id",(id,))
     t["activity"]=query("SELECT * FROM activity WHERE thread_id=? ORDER BY occurred_at DESC,recorded_at DESC",(id,))
     t["related"]=query("SELECT t.id,t.title FROM relations r JOIN threads t ON t.id=CASE WHEN r.a=? THEN r.b ELSE r.a END WHERE r.a=? OR r.b=?",(id,id,id))
     return t
 def list_threads(q=""):
-    rows=query("SELECT t.*,(SELECT COUNT(*) FROM entries e WHERE e.thread_id=t.id) entry_count FROM threads t WHERE title LIKE ? OR summary LIKE ? OR EXISTS(SELECT 1 FROM entries e WHERE e.thread_id=t.id AND e.body LIKE ?) ORDER BY updated_at DESC",("%"+q+"%",)*3)
+    rows=with_categories(query("SELECT t.*,(SELECT COUNT(*) FROM entries e WHERE e.thread_id=t.id) entry_count FROM threads t WHERE title LIKE ? OR summary LIKE ? OR EXISTS(SELECT 1 FROM entries e WHERE e.thread_id=t.id AND e.body LIKE ?) OR EXISTS(SELECT 1 FROM thread_categories tc WHERE tc.thread_id=t.id AND tc.name LIKE ?) ORDER BY updated_at DESC",("%"+q+"%",)*4))
     for t in rows:
         t["attention_due"]=bool(t["revisit_at"] and t["revisit_at"]<=now() and t["state"]!="settled" and not t.get("archived_at"))
         t["deadline_due"]=bool(t.get("due_at") and t["due_at"][:10]<=now()[:10] and t["state"]!="settled")
@@ -52,14 +75,23 @@ def list_threads(q=""):
         t["due"]=t["attention_due"] or t["recurring_due"]
     for t in rows:t["action_config"]=json.loads(t["action_config"] or "{}")
     return sorted(rows,key=lambda t:not t["due"])
-def create(title,summary=""):
+def create(title,summary="",categories=None):
     if not title.strip():raise ValueError("Title required")
+    names=normalize_categories(categories if categories is not None else [])
     id=uuid4().hex;t=now()
-    with conn() as c:c.execute("INSERT INTO threads(id,title,summary,created_at,updated_at) VALUES(?,?,?,?,?)",(id,title.strip(),summary,t,t))
+    with conn() as c:
+        c.execute("INSERT INTO threads(id,title,summary,category,created_at,updated_at) VALUES(?,?,?,?,?,?)",(id,title.strip(),summary,names[0],t,t))
+        c.executemany("INSERT INTO thread_categories(thread_id,name,position) VALUES(?,?,?)",[(id,name,i) for i,name in enumerate(names)])
     return get(id)
 def update(id,fields):
-    allowed={"archived_at","title","summary","state","revisit_at","due_at","category","recurrence","next_occurrence","due_action","action_config","action_prompt"}
+    allowed={"archived_at","title","summary","state","revisit_at","due_at","category","categories","recurrence","next_occurrence","due_action","action_config","action_prompt"}
     fields={k:v for k,v in fields.items() if k in allowed}
+    names=None
+    if "categories" in fields:
+        names=normalize_categories(fields.pop("categories"))
+        fields["category"]=names[0]
+    elif "category" in fields:
+        names=normalize_categories([fields["category"]]);fields["category"]=names[0]
     if "archived_at" in fields and fields["archived_at"] not in (None,) and not isinstance(fields["archived_at"],str):raise ValueError("Invalid archive timestamp")
     if "recurrence" in fields and fields["recurrence"] not in (None,"daily","weekly","monthly","quarterly","yearly"):raise ValueError("Invalid recurrence")
     if "action_prompt" in fields and fields["action_prompt"] is not None and (not isinstance(fields["action_prompt"],str) or len(fields["action_prompt"])>1000):raise ValueError("Action description too long")
@@ -77,7 +109,29 @@ def update(id,fields):
     if fields:
         if "revisit_at" in fields:fields["notified_for"]=None
         fields["updated_at"]=now()
-        with conn() as c:c.execute("UPDATE threads SET "+",".join(k+"=?" for k in fields)+" WHERE id=?",(*fields.values(),id))
+        with conn() as c:
+            changed=c.execute("UPDATE threads SET "+",".join(k+"=?" for k in fields)+" WHERE id=?",(*fields.values(),id)).rowcount
+            if changed and names is not None:
+                c.execute("DELETE FROM thread_categories WHERE thread_id=?",(id,))
+                c.executemany("INSERT INTO thread_categories(thread_id,name,position) VALUES(?,?,?)",[(id,name,i) for i,name in enumerate(names)])
+    return get(id)
+def set_categories(id,categories,mode="replace"):
+    """Replace, add, or remove memberships without creating duplicate task records."""
+    if mode not in ("replace","add","remove"):raise ValueError("Category mode must be replace, add, or remove")
+    names=normalize_categories(categories)
+    if not categories:names=[]
+    # Hold a write transaction across the read and update so simultaneous edits do not lose memberships.
+    with conn() as c:
+        c.execute("BEGIN IMMEDIATE")
+        row=c.execute("SELECT category FROM threads WHERE id=?",(id,)).fetchone()
+        if row is None:return None
+        existing=[r[0] for r in c.execute("SELECT name FROM thread_categories WHERE thread_id=? ORDER BY position",(id,))] or [row[0]]
+        if mode=="add":names=existing+[name for name in names if name.casefold() not in {v.casefold() for v in existing}]
+        elif mode=="remove":names=[n for n in existing if n.casefold() not in {v.casefold() for v in names}]
+        names=normalize_categories(names)
+        c.execute("UPDATE threads SET category=?,updated_at=? WHERE id=?",(names[0],now(),id))
+        c.execute("DELETE FROM thread_categories WHERE thread_id=?",(id,))
+        c.executemany("INSERT INTO thread_categories(thread_id,name,position) VALUES(?,?,?)",[(id,name,i) for i,name in enumerate(names)])
     return get(id)
 def add(id,kind,body):
     if kind not in {"thought","question","action","decision","update"}:raise ValueError("Invalid kind")
@@ -114,8 +168,7 @@ def board():
     groups={}
     for t in list_threads():
         if t.get("archived_at"):continue
-        category=t.get("category") or "Unsorted"
-        groups.setdefault(category,[]).append(t)
+        for category in category_names(t):groups.setdefault(category,[]).append(t)
     return [{"name":name,"threads":items} for name,items in sorted(groups.items(),key=lambda x:(x[0]=="Unsorted",x[0].casefold()))]
 
 def claim_notifications():
@@ -194,7 +247,7 @@ def activity_report(period="week",anchor=None):
         start=ref.replace(month=month,day=1,hour=0,minute=0,second=0,microsecond=0)
         newmonth=start.month+(12 if period=="year" else 3 if period=="quarter" else 1)
         end=start.replace(year=start.year+(newmonth-1)//12,month=(newmonth-1)%12+1)
-    rows=query("SELECT a.*,t.title,t.category FROM activity a JOIN threads t ON t.id=a.thread_id WHERE occurred_at>=? AND occurred_at<? ORDER BY occurred_at DESC",(start.isoformat(),end.isoformat()))
+    rows=with_categories(query("SELECT a.*,t.title,t.category FROM activity a JOIN threads t ON t.id=a.thread_id WHERE occurred_at>=? AND occurred_at<? ORDER BY occurred_at DESC",(start.isoformat(),end.isoformat())),"thread_id")
     return {"period":period,"start":start.isoformat(),"end":end.isoformat(),"events":rows,"count":len(rows)}
 
 def report_for_task(thread_id,anchor=None):
@@ -208,7 +261,7 @@ def report_for_task(thread_id,anchor=None):
     # Include the most recently finished interval at the due instant.
     result=activity_report(config.get("period","week"),(ref-timedelta(microseconds=1)).isoformat())
     category=config.get("category")
-    if category:result["events"]=[event for event in result["events"] if event["category"]==category]
+    if category:result["events"]=[event for event in result["events"] if category in category_names(event)]
     result["count"]=len(result["events"])
     result["category"]=category or None
     result["thread_id"]=thread_id
