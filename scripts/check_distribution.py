@@ -19,7 +19,7 @@ assert names=={"tether","tether-desktop"},names
 assert d.version==__version__
 assert WINDOW_TITLE=="tether"
 for name in ("index.html","board.html"):
-    page=files("tend").joinpath(name).read_text()
+    page=files("tend").joinpath(name).read_text(encoding="utf-8")
     assert '<span class="brand-word">tether<span>.</span></span>' in page
 print("Installed wheel:",d.version,"; commands:",sorted(names))
 '''
