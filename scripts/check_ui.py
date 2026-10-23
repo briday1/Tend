@@ -81,7 +81,7 @@ def main():
                 else:page.route('**/api/attention*',lambda route:route.fulfill(status=200,content_type='application/json',body='{"items":[]}'))
                 page.goto(base+'/',wait_until='networkidle')
                 expect(page.locator('.brand-word')).to_have_text('tether.')
-                assert page.title()=='tether-chat'
+                assert page.title()=='tether.'
                 assert page.locator('#chatCategories').count()==0
                 category=page.locator('#chat a.chat-reference').filter(has_text='Projects')
                 expect(category).to_have_count(1)
