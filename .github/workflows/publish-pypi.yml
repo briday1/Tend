@@ -26,7 +26,7 @@ jobs:
         run: |
           import json, os, tomllib, urllib.request, urllib.error
           from pathlib import Path
-          project=tomllib.loads(Path('pyproject.toml').read_text())['project']
+          project=tomllib.loads(Path('pyproject.toml').read_text(encoding='utf-8'))['project']
           version=project['version']
           if os.environ.get('GITHUB_REF_TYPE')=='tag' and os.environ['GITHUB_REF_NAME']!='v'+version:
               raise SystemExit('Release tag must match pyproject.toml version')
@@ -92,13 +92,13 @@ jobs:
           TWINE_PASSWORD: ${{ secrets.PYPI_API_KEY }}
         run: |
           test -n "$TWINE_PASSWORD" || { echo 'PYPI_API_KEY is not available to this workflow'; exit 1; }
-          python -m twine upload --non-interactive dist/*
+          python -m twine upload --verbose --non-interactive --disable-progress-bar dist/*
       - name: Confirm the version is visible on PyPI
         shell: python
         run: |
           import json, time, tomllib, urllib.request, urllib.error
           from pathlib import Path
-          version=tomllib.loads(Path('pyproject.toml').read_text())['project']['version']
+          version=tomllib.loads(Path('pyproject.toml').read_text(encoding='utf-8'))['project']['version']
           for attempt in range(12):
               try:
                   with urllib.request.urlopen('https://pypi.org/pypi/tether/'+version+'/json',timeout=15) as response:
