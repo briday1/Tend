@@ -1,4 +1,4 @@
-"""Persist database location and stage safe migrations for next Tend restart."""
+"""Persist database location and stage safe migrations for next tether-chat restart."""
 import json, os, sqlite3
 from pathlib import Path
 
@@ -73,12 +73,12 @@ def validate_existing(path):
             if c.execute("PRAGMA integrity_check").fetchone()[0]!="ok":raise ValueError("Database integrity check failed")
             tables={row[0] for row in c.execute("SELECT name FROM sqlite_master WHERE type='table'")}
             if not {"threads","entries","relations","conversation"}.issubset(tables):
-                raise ValueError("File is not a recognized Tend database")
+                raise ValueError("File is not a recognized tether-chat database")
     except sqlite3.DatabaseError:
-        raise ValueError("File is not a readable Tend SQLite database") from None
+        raise ValueError("File is not a readable tether-chat SQLite database") from None
 
 def choose_folder():
-    """Open a native OS folder picker on the same machine running Tend."""
+    """Open a native OS folder picker on the same machine running tether-chat."""
     import subprocess,sys
     script=(
         "import tkinter as tk\n"
@@ -87,7 +87,7 @@ def choose_folder():
         "root.withdraw()\n"
         "root.attributes('-topmost', True)\n"
         "try:\n"
-        "    print(filedialog.askdirectory(parent=root,title='Select Tend database folder',mustexist=True) or '')\n"
+        "    print(filedialog.askdirectory(parent=root,title='Select tether-chat database folder',mustexist=True) or '')\n"
         "finally:\n"
         "    root.destroy()\n"
     )

@@ -3,8 +3,8 @@ requires = ["setuptools>=69"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "tether"
-version = "2026.1"
+name = "tether-chat"
+version = "2026.2"
 description = "Local-first task and action-item assistant"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -21,10 +21,10 @@ dependencies = [
 ]
 
 [project.scripts]
-tether = "tend.cli:main"
+"tether-chat" = "tend.cli:main"
 
 [project.gui-scripts]
-tether-desktop = "tend.native:main"
+"tether-chat-desktop" = "tend.native:main"
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "httpx>=0.27"]

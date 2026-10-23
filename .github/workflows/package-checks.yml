@@ -50,7 +50,7 @@ jobs:
         run: >-
           python -c "from importlib.metadata import distribution;
           from tend.snapshot_export import png, svg;
-          d=distribution('tether');
+          d=distribution('tether-chat');
           names={e.name for e in d.entry_points if e.group in ('console_scripts','gui_scripts')};
-          assert names=={'tether','tether-desktop'}, names;
+          assert names=={'tether-chat','tether-chat-desktop'}, names;
           print('Verified entry points:', sorted(names))"

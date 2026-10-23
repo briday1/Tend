@@ -1,4 +1,4 @@
-"""Create an OS-native Tether launcher after pip installation."""
+"""Create an OS-native tether-chat launcher after pip installation."""
 import os
 from pathlib import Path
 import platform
@@ -45,23 +45,23 @@ def install(destination=None):
         if windowed.is_file():python=str(windowed)
         # A real Windows shortcut, rather than a shortcut to a repo-specific exe.
         from .windows_icon import create_icon
-        icon_file=Path.home()/".tend"/"tether-desktop-v3.ico"
+        icon_file=Path.home()/".tend"/"tether-chat-desktop-v3.ico"
         create_icon(icon_file)
-        path=folder/"tether.lnk"
+        path=folder/"tether-chat.lnk"
         escape=lambda s:s.replace("'","''")
         script=("$s=(New-Object -ComObject WScript.Shell).CreateShortcut('"+escape(str(path))+"');"
                 +"$s.TargetPath='"+escape(python)+"';"
                 +"$s.Arguments='-m tend.native';"
                 +"$s.WorkingDirectory='"+escape(str(Path.home()))+"';"
-                +"$s.Description='Open tether';$s.IconLocation='"+escape(str(icon_file))+"';$s.Save()")
+                +"$s.Description='Open tether-chat';$s.IconLocation='"+escape(str(icon_file))+"';$s.Save()")
         subprocess.run(["powershell","-NoProfile","-NonInteractive","-Command",script],check=True)
     elif sys.platform=="darwin":
-        path=folder/"tether.command"
+        path=folder/"tether-chat.command"
         path.write_text("#!/bin/sh\nexec "+shlex.quote(python)+" -m tend.native\n",encoding="utf-8")
         path.chmod(0o755)
     else:
-        path=folder/"tether.desktop"
+        path=folder/"tether-chat.desktop"
         exec_line='"'+python.replace("\\","\\\\").replace('"','\\"').replace("%","%%")+'" -m tend.native'
-        path.write_text("[Desktop Entry]\nType=Application\nName=tether\nComment=Local task assistant\nExec="+exec_line+"\nTerminal=false\nCategories=Office;Utility;\n",encoding="utf-8")
+        path.write_text("[Desktop Entry]\nType=Application\nName=tether-chat\nComment=Local task assistant\nExec="+exec_line+"\nTerminal=false\nCategories=Office;Utility;\n",encoding="utf-8")
         path.chmod(0o755)
     return path

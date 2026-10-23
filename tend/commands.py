@@ -10,7 +10,7 @@ COMMANDS=[
 ]
 def execute(message):
     command=message.strip().split(maxsplit=1)[0].lower()
-    if command=="/help":return {"answer":"# Tend commands\n"+ "\n".join("- **"+c["name"]+"** — "+c["description"] for c in COMMANDS)}
+    if command=="/help":return {"answer":"# tether-chat commands\n"+ "\n".join("- **"+c["name"]+"** — "+c["description"] for c in COMMANDS)}
     if command=="/brief":return {"answer":store.daily_brief()}
     if command in ("/due","/waiting","/recent"):
         rows=store.overview()["due" if command=="/due" else "waiting"] if command!="/recent" else store.list_threads()[:15]

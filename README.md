@@ -1,27 +1,27 @@
-# tether
+# tether-chat
 
 A local-first assistant for tasks, action items, and things worth remembering. Talk naturally; your work and conversation stay in a local SQLite database.
 
-![tether conversation](docs/screenshots/conversation.png)
+![tether-chat conversation](docs/screenshots/conversation.png)
 
 ## Install
 
 Requires Python 3.11 or newer. No PyInstaller build or separate Windows `.exe` installer is required.
 
-**PyPI status:** PyPI rejected the distribution name with `400 The name 'tether' isn't allowed.` The release workflow includes PyPI publication, but a new version cannot override that name restriction. Until it is resolved, install the current code from GitHub (Git is required for this source-install command):
+Install the desktop app from PyPI:
 
 ```sh
-uv tool install --reinstall "tether[desktop] @ git+https://github.com/briday1/Tend.git@main"
-tether-desktop
+uv tool install --reinstall "tether-chat[desktop]"
+tether-chat-desktop
 ```
 
-The install exposes only **`tether`** and **`tether-desktop`**. On Windows, `tether-desktop` opens a native WebView2 window and remains in the tray after the window closes. Choose **Open tether** to return or **Exit tether** to stop it. The Microsoft Edge WebView2 Runtime is required. macOS and Linux open the browser UI and use a tray/menu-bar entry where supported by the desktop environment.
+The install exposes only **`tether-chat`** and **`tether-chat-desktop`**. On Windows, `tether-chat-desktop` opens a native WebView2 window and remains in the tray after the window closes. Choose **Open tether-chat** to return or **Exit tether-chat** to stop it. The Microsoft Edge WebView2 Runtime is required. macOS and Linux open the browser UI and use a tray/menu-bar entry where supported by the desktop environment.
 
 **Browser/server mode:**
 
 ```sh
-python -m pip install "tether @ git+https://github.com/briday1/Tend.git@main"
-tether serve --port 9000 --mcp-port 9001
+python -m pip install "tether-chat @ git+https://github.com/briday1/Tend.git@main"
+tether-chat serve --port 9000 --mcp-port 9001
 ```
 
 Without custom ports, the browser UI is at `http://127.0.0.1:8765` and the local MCP server is at `http://127.0.0.1:8766/mcp`. Use `--no-browser` to start without opening a window. Both services are local-only; Ctrl+C stops a terminal-launched server.
@@ -29,13 +29,13 @@ Without custom ports, the browser UI is at `http://127.0.0.1:8765` and the local
 **Optional desktop shortcut:**
 
 ```sh
-tether desktop install
-tether desktop install --destination "/path/to/shortcuts"
+tether-chat desktop install
+tether-chat desktop install --destination "/path/to/shortcuts"
 ```
 
-The default destination is your operating system's Desktop folder. Windows gets an icon-branded `.lnk`, macOS a `.command` launcher, and Linux a `.desktop` entry. Keep the Python/uv environment that the shortcut references. Linux may require marking the launcher trusted. Add `tether-desktop` to your OS login/startup applications to launch at sign-in; installing it does not enable startup automatically.
+The default destination is your operating system's Desktop folder. Windows gets an icon-branded `.lnk`, macOS a `.command` launcher, and Linux a `.desktop` entry. Keep the Python/uv environment that the shortcut references. Linux may require marking the launcher trusted. Add `tether-chat-desktop` to your OS login/startup applications to launch at sign-in; installing it does not enable startup automatically.
 
-Once PyPI accepts the distribution name, the equivalent published-package installation will be `uv tool install "tether[desktop]"`. That command is **not currently a working PyPI installation**.
+Source installs are also available using the GitHub commands below.
 
 ## Set up and use
 
@@ -53,13 +53,13 @@ Open **Settings → AI connection**, enter your provider's HTTPS API base URL, m
 
 ## Update
 
-Choose **Exit tether** in the tray before replacing a running installation:
+Choose **Exit tether-chat** in the tray before replacing a running installation:
 
 ```sh
-uv tool install --reinstall --refresh "tether[desktop] @ git+https://github.com/briday1/Tend.git@main"
+uv tool install --reinstall --refresh "tether-chat[desktop] @ git+https://github.com/briday1/Tend.git@main"
 ```
 
-Run `tether desktop install` again to refresh an existing shortcut. Existing data and provider settings remain in `~/.tend`; this does not install a legacy `tend` command.
+Run `tether-chat desktop install` again to refresh an existing shortcut. Existing data and provider settings remain in `~/.tend`; this does not install a legacy `tend` command.
 
 ## Releases
 

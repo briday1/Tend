@@ -90,11 +90,11 @@ def test_failed_and_interrupted_requests_are_not_automatically_replayed(client, 
 
 def test_notification_has_tether_icon_and_brand(monkeypatch,tmp_path):
     from tend import notifications,branding
-    calls=[];icon=tmp_path/'tether.ico';icon.write_bytes(b'icon')
+    calls=[];icon=tmp_path/'tether-chat.ico';icon.write_bytes(b'icon')
     monkeypatch.setitem(sys.modules,'plyer',SimpleNamespace(notification=SimpleNamespace(notify=lambda **kw:calls.append(kw))))
     monkeypatch.setattr(branding,'icon_path',lambda:icon)
     monkeypatch.setattr(branding,'set_process_identity',lambda:None)
     notifications.notify({'title':'Check the draft','task_title':'Prepare briefing'})
-    assert calls[0]['app_icon']==str(icon) and calls[0]['app_name']=='tether'
-    assert calls[0]['title']=='tether · Attention'
+    assert calls[0]['app_icon']==str(icon) and calls[0]['app_name']=='tether-chat'
+    assert calls[0]['title']=='tether-chat · Attention'
     assert 'Prepare briefing' in calls[0]['message']

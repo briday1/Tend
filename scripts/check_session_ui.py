@@ -30,7 +30,7 @@ def serve_fixture():
 def main():
     from playwright.sync_api import sync_playwright,expect
     from tend import store
-    with tempfile.TemporaryDirectory(prefix='tether-session-') as folder:
+    with tempfile.TemporaryDirectory(prefix='tether-chat-session-') as folder:
         os.environ['TEND_DB']=str(Path(folder)/'session.sqlite3')
         os.environ['TEND_CONFIG']=str(Path(folder)/'provider.json')
         os.environ.pop('TEND_AI_API_KEY',None)

@@ -1,4 +1,4 @@
-"""Natural-language Tend snapshot requests must bypass AI and resolve correct ranges."""
+"""Natural-language tether-chat snapshot requests must bypass AI and resolve correct ranges."""
 from datetime import date
 from tend.snapshot_intent import resolve
 

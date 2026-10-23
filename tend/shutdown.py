@@ -1,4 +1,4 @@
-"""Windows-safe shutdown of an owned Tend supervisor and all its subprocesses."""
+"""Windows-safe shutdown of an owned tether-chat supervisor and all its subprocesses."""
 import time
 import psutil
 
@@ -35,5 +35,5 @@ def stop_process_tree(pid,log=print):
     for proc in processes:
         try:
             if proc.is_running() and proc.status()!=psutil.STATUS_ZOMBIE:
-                log("Tend process still running after exit: "+str(proc.pid))
+                log("tether-chat process still running after exit: "+str(proc.pid))
         except psutil.NoSuchProcess:pass
