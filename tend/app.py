@@ -39,6 +39,10 @@ class Change(BaseModel):
 class Entry(BaseModel):
     kind:Literal["thought","question","action","decision","update"]="thought"
     body:str=Field(min_length=1)
+class ActionChange(BaseModel):
+    done:bool|None=None
+    due_at:datetime|None=None
+    revisit_at:datetime|None=None
 class Done(BaseModel):
     done:bool
 class Relation(BaseModel):
@@ -128,6 +132,13 @@ def restore(id:str):return db.archive_thread(id,False)
 def delete(id:str):return {"deleted":db.delete(id)}
 @app.post("/api/threads/{id}/entries",status_code=201)
 def add(id:str,data:Entry):return found(db.add(id,data.kind,data.body))
+@app.patch("/api/actions/{id}")
+def change_action(id:str,data:ActionChange):
+    fields=data.model_dump(exclude_unset=True)
+    for field in ("due_at","revisit_at"):
+        if fields.get(field):fields[field]=fields[field].isoformat()
+    try:return found(db.update_action(id,fields))
+    except ValueError as exc:raise HTTPException(422,str(exc)) from None
 @app.patch("/api/entries/{id}")
 def done(id:str,data:Done):return found(db.toggle(id,data.done))
 @app.post("/api/threads/{id}/links")
