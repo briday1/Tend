@@ -187,6 +187,8 @@ def main():
                 assert page.locator('.task-section h2').inner_text()=='All Tasks (7)'
                 page.screenshot(path=str(OUT / "tasks.png"), full_page=True)
                 page.locator(".task-row").filter(has_text="Weekly activity report").click()
+                page.locator(".actions-section").wait_for()
+                page.locator(".actions-section button", has_text="Edit task").click()
                 page.locator("#panel:not(.hidden)").wait_for()
                 # Check adding and removing a membership through the actual editor.
                 page.locator('#category').fill('Review')
