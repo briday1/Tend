@@ -1,0 +1,33 @@
+name: Check proposed PyPI distribution
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/check-pypi.yml
+permissions:
+  contents: read
+jobs:
+  availability:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check exact normalized PyPI project name
+        env:
+          CANDIDATE: tether-taskboard
+        run: |
+          python - <<'PY'
+          import json, os, sys, urllib.error, urllib.request
+          from packaging.utils import canonicalize_name
+          name=canonicalize_name(os.environ["CANDIDATE"])
+          url="https://pypi.org/pypi/"+name+"/json"
+          req=urllib.request.Request(url,headers={"User-Agent":"Tether-name-check/1.0"})
+          try:
+              with urllib.request.urlopen(req,timeout=15) as response:
+                  if response.status==200:
+                      print("TAKEN:",name)
+                      sys.exit(1)
+          except urllib.error.HTTPError as exc:
+              if exc.code==404:
+                  print("NOT CURRENTLY LISTED:",name)
+              else:raise
+          PY
