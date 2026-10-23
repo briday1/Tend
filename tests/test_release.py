@@ -23,14 +23,14 @@ def test_exact_public_commands_and_core_pillow():
 def test_header_brand_and_shared_drawer_styles():
     for name in ('index.html','board.html'):
         page=(ROOT/'tend'/name).read_text(encoding='utf-8')
-        assert '<span class="brand-word">tether-chat<span>.</span></span>' in page
+        assert '<span class="brand-word">tether<span>.</span></span>' in page
         assert '<span class="brand-word">tend' not in page
     css=(ROOT/'tend/theme.css').read_text(encoding='utf-8')
     assert '.reference-drawer,.action-drawer{position:fixed;' in css
     assert '#board:has(.actions-section){grid-template-columns:' in css
     assert '.bubble.assistant a{color:var(--accent)!important}' in css
     from tend.native import WINDOW_TITLE
-    assert WINDOW_TITLE=='tether-chat'
+    assert WINDOW_TITLE=='tether.'
 
 
 def test_icons_have_all_dpi_sizes_and_unclipped_alpha(tmp_path):

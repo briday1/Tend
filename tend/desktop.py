@@ -42,7 +42,7 @@ def open_app():
 def show_error(message):
     try:
         import ctypes
-        ctypes.windll.user32.MessageBoxW(None,str(message),"tether-chat launcher",0x10)
+        ctypes.windll.user32.MessageBoxW(None,str(message),"tether. launcher",0x10)
     except Exception:
         pass
 
@@ -112,7 +112,7 @@ def run_tray(server):
     tray_icon=Image.open(io.BytesIO(raster(256))).convert("RGBA")
     def reopen(icon,item):
         if not healthy():
-            show_error("tether-chat's web server is unavailable. Exit tether-chat and start it again from the desktop shortcut.")
+            show_error("tether-chat's web server is unavailable. Exit tether and start it again from the desktop shortcut.")
         else:
             open_app()
     def quit_tend(icon,item):
@@ -136,10 +136,10 @@ def run_tray(server):
         except Exception as exc:
             log("Unable to stop services cleanly: "+repr(exc))
     menu=pystray.Menu(
-        pystray.MenuItem("Open tether-chat",reopen,default=True),
-        pystray.MenuItem("Exit tether-chat" if server else "Exit tether-chat tray",quit_tend),
+        pystray.MenuItem("Open tether",reopen,default=True),
+        pystray.MenuItem("Exit tether" if server else "Exit tether tray",quit_tend),
     )
-    icon=pystray.Icon("tend",tray_icon,"tether-chat",menu)
+    icon=pystray.Icon("tend",tray_icon,"tether.",menu)
     icon.run()
 
 if __name__=="__main__":

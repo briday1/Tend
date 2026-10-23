@@ -1,4 +1,4 @@
-# tether-chat
+# tether.
 
 A local-first assistant for tasks, action items, and things worth remembering. Talk naturally; your work and conversation stay in a local SQLite database.
 
@@ -15,7 +15,7 @@ uv tool install --reinstall "tether-chat[desktop]"
 tether-chat-desktop
 ```
 
-The install exposes only **`tether-chat`** and **`tether-chat-desktop`**. On Windows, `tether-chat-desktop` opens a native WebView2 window and remains in the tray after the window closes. Choose **Open tether-chat** to return or **Exit tether-chat** to stop it. The Microsoft Edge WebView2 Runtime is required. macOS and Linux open the browser UI and use a tray/menu-bar entry where supported by the desktop environment.
+The install exposes only **`tether-chat`** and **`tether-chat-desktop`**. On Windows, `tether-chat-desktop` opens a native WebView2 window and remains in the tray after the window closes. Choose **Open tether** to return or **Exit tether** to stop it. The Microsoft Edge WebView2 Runtime is required. macOS and Linux open the browser UI and use a tray/menu-bar entry where supported by the desktop environment.
 
 **Browser/server mode:**
 
@@ -53,7 +53,7 @@ Open **Settings → AI connection**, enter your provider's HTTPS API base URL, m
 
 ## Update
 
-Choose **Exit tether-chat** in the tray before replacing a running installation:
+Choose **Exit tether** in the tray before replacing a running installation:
 
 ```sh
 uv tool install --reinstall --refresh "tether-chat[desktop] @ git+https://github.com/briday1/Tend.git@main"

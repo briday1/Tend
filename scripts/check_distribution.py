@@ -17,13 +17,13 @@ d=distribution("tether-chat")
 names={e.name for e in d.entry_points if e.group in ("console_scripts","gui_scripts")}
 assert names=={"tether-chat","tether-chat-desktop"},names
 assert d.version==__version__
-assert WINDOW_TITLE=="tether-chat"
+assert WINDOW_TITLE=="tether."
 assert files("tend").joinpath("chat.js").is_file()
 assert files("tend").joinpath("chat.js").is_file()
 assert files("tend").joinpath("action-notes.js").is_file()
 for name in ("index.html","board.html"):
     page=files("tend").joinpath(name).read_text(encoding="utf-8")
-    assert '<span class="brand-word">tether-chat<span>.</span></span>' in page
+    assert '<span class="brand-word">tether<span>.</span></span>' in page
 print("Installed wheel:",d.version,"; commands:",sorted(names))
 '''
 with tempfile.TemporaryDirectory(prefix='tether-chat-wheel-') as temporary:

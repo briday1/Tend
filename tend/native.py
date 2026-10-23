@@ -6,7 +6,7 @@ import sys
 import time
 from pathlib import Path
 
-WINDOW_TITLE='tether-chat'
+WINDOW_TITLE='tether.'
 _ICON_HANDLES={}
 _ICON_RESOURCES=[]
 
@@ -141,8 +141,8 @@ def _run():
             nonlocal exiting
             exiting=True;icon.stop();window.destroy()
 
-        tray=pystray.Icon('tether-chat',Image.open(io.BytesIO(raster(256))).convert('RGBA'),'tether-chat',
-            pystray.Menu(pystray.MenuItem('Open tether-chat',reopen,default=True),pystray.MenuItem('Exit tether-chat',exit_app)))
+        tray=pystray.Icon('tether-chat',Image.open(io.BytesIO(raster(256))).convert('RGBA'),'tether.',
+            pystray.Menu(pystray.MenuItem('Open tether',reopen,default=True),pystray.MenuItem('Exit tether',exit_app)))
         tray.run_detached()
         webview.start(gui='edgechromium',debug=False,private_mode=False,storage_path=str(Path.home()/'.tend'/'webview'))
     finally:
