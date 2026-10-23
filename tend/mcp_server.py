@@ -48,6 +48,31 @@ def capture_thought(title:str,summary:str="",categories:list[str]|None=None)->di
     """Capture one task, optionally in several categories. Do not create a copy for each category."""
     return db.create(title,summary,categories)
 @mcp.tool()
+def update_action_item(action_id:str,due_at:str|None=None,revisit_at:str|None=None,done:bool|None=None)->dict:
+    """Change one action's dates or completion without affecting sibling actions or its parent task. Only supply fields to change; empty string clears a date."""
+    fields={}
+    if due_at is not None:fields["due_at"]=due_at or None
+    if revisit_at is not None:fields["revisit_at"]=revisit_at or None
+    if done is not None:fields["done"]=done
+    try:return db.update_action(action_id,fields) or {"error":"Action not found"}
+    except ValueError as exc:return {"error":str(exc)}
+@mcp.tool()
+def add_action_item(task_id:str,text:str,due_at:str="",bring_to_attention_at:str="")->dict:
+    """Create an action item under an existing task; skip matching duplicates. Action due dates and Bring to attention schedules apply only to the item. Times must include timezone."""
+    previous=db.find_action(task_id,text)
+    if previous:return {"action":previous,"already_exists":True}
+    if due_at or bring_to_attention_at:
+        fields={**({"due_at":due_at} if due_at else {}),**({"revisit_at":bring_to_attention_at} if bring_to_attention_at else {})}
+        # Validate dates before creating anything, so invalid input never leaves orphan items.
+        from datetime import datetime
+        for stamp in fields.values():
+            dt=datetime.fromisoformat(stamp.replace("Z","+00:00"))
+            if dt.tzinfo is None:return {"error":"Action dates must have timezones"}
+    entry=db.add(task_id,"action",text)
+    if not entry:return {"error":"Task not found"}
+    if due_at or bring_to_attention_at:entry=db.update_action(entry["id"],fields)
+    return {"action":entry,"already_exists":False}
+@mcp.tool()
 def add_to_thread(thread_id:str,text:str,kind:str="thought")->dict:
     """Add an observation, question, action, decision, or update."""
     return db.add(thread_id,kind,text) or {"error":"Thread not found"}
