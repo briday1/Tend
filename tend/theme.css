@@ -102,7 +102,7 @@ body.drawer-open{overflow:hidden}
 /* Shared wordmark and small drawer controls: identical on both pages. */
 .topnav .brand,.topnav .brand .brand-word{color:var(--text)!important}
 .topnav .brand .brand-word>span{color:var(--accent)!important}
-.reference-close,#panel #close{float:right;display:inline-flex!important;align-items:center;justify-content:center;flex:0 0 28px!important;width:28px!important;min-width:28px!important;height:28px!important;min-height:28px!important;padding:0!important;margin:0!important;font-size:14px!important;line-height:1!important;border-radius:6px!important}
+.reference-close,.settings #closeSettings{display:inline-flex!important;align-items:center;justify-content:center;flex:0 0 38px!important;width:38px!important;min-width:38px!important;height:38px!important;min-height:38px!important;padding:0!important;border:1px solid var(--line)!important;border-radius:9px!important;background:var(--soft)!important;color:var(--text)!important;cursor:pointer}.reference-close{float:right;margin:0!important}.reference-close svg,.settings #closeSettings svg{display:block;flex:none}.reference-close:focus-visible,.settings #closeSettings:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .actions-section .edit-task-button{display:inline-flex;align-items:center;width:auto!important;min-height:28px;padding:4px 9px!important;font-size:12px!important;line-height:18px;border-radius:6px}
 .category-row{border:1px solid var(--line)!important;border-left-width:1px!important;background:color-mix(in srgb,var(--category-color,var(--accent)) 13%,var(--paper))!important}
 .category-row:hover{background:color-mix(in srgb,var(--category-color,var(--accent)) 20%,var(--paper))!important}
